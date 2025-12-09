@@ -89,8 +89,7 @@ extension HTTPService {
     public func load<R: Request>(_ request: R) async throws -> Response<R.ResponseBody> {
         let httpRequest = try request.httpRequest(baseURL: baseURL.absoluteString)
         let (data, httpResponse) = try await session.data(for: httpRequest)
-        let body = try decoder.decode(R.ResponseBody.self, from: data)
-        return Response(body: body, status: httpResponse.status, headerFields: httpResponse.headerFields)
+        return Response(data: data, status: httpResponse.status, headerFields: httpResponse.headerFields, decoder: decoder)
     }
 }
 
