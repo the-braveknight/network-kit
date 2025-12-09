@@ -12,26 +12,28 @@ extension Request {
     /// Sets the request body from raw data.
     public func body(_ data: Data) -> Self {
         var copy = self
-        copy.components.body = data
+        copy.components.body = .data(data)
         return copy
     }
 
-    /// Sets the request body by encoding an `Encodable` value.
+    /// Sets the request body with an `Encodable` value.
     ///
+    /// The value will be encoded using the service's encoder when the request is loaded.
     /// Automatically sets the `Content-Type` header to `application/json`.
     ///
-    /// - Parameters:
-    ///   - body: The encodable value to use as the request body
-    ///   - encoder: The encoder to use (defaults to `JSONEncoder()`)
-    public func body<Body: Encodable>(_ body: Body, encoder: some RequestEncoder = JSONEncoder()) -> Self {
+    /// - Parameter body: The encodable value to use as the request body
+    public func body(_ body: some Encodable & Sendable) -> Self {
         var copy = self
-        copy.components.body = try? encoder.encode(body)
+        copy.components.body = .encodable { encoder in
+            try encoder.encode(body)
+        }
         copy.components.headerFields[.contentType] = "application/json"
         return copy
     }
 
     /// Sets the request body using a result builder.
     ///
+    /// The value will be encoded using the service's encoder when the request is loaded.
     /// Automatically sets the `Content-Type` header to `application/json`.
     ///
     /// ```swift
@@ -45,16 +47,12 @@ extension Request {
     ///     }
     /// ```
     ///
-    /// - Parameters:
-    ///   - encoder: The encoder to use (defaults to `JSONEncoder()`)
-    ///   - builder: A closure that returns an encodable value using result builder syntax
-    public func body(encoder: some RequestEncoder = JSONEncoder(), @HTTPBodyBuilder _ builder: () -> (any Encodable)?) -> Self {
+    /// - Parameter builder: A closure that returns an encodable value using result builder syntax
+    public func body<Body: Encodable & Sendable>(@HTTPBodyBuilder _ builder: () -> Body?) -> Self {
         var copy = self
         if let body = builder() {
-            if let data = body as? Data {
-                copy.components.body = data
-            } else {
-                copy.components.body = try? encoder.encode(body)
+            copy.components.body = .encodable { encoder in
+                try encoder.encode(body)
             }
             copy.components.headerFields[.contentType] = "application/json"
         }
@@ -66,7 +64,7 @@ extension Request {
 
 /// Result builder for constructing request bodies in a declarative way.
 ///
-/// `HTTPBodyBuilder` enables the declarative syntax used in the `body(encoder:_:)` modifier,
+/// `HTTPBodyBuilder` enables the declarative syntax used in the `body(_:)` modifier,
 /// allowing you to specify the request body with support for conditionals and optionals.
 /// Only a single body value is allowed per request.
 ///
@@ -77,23 +75,23 @@ extension Request {
 /// ```
 @resultBuilder
 public enum HTTPBodyBuilder {
-    public static func buildBlock(_ component: (any Encodable)?) -> (any Encodable)? {
+    public static func buildBlock<T: Encodable & Sendable>(_ component: T) -> T? {
         component
     }
 
-    public static func buildExpression(_ expression: (any Encodable)?) -> (any Encodable)? {
-        expression
-    }
-
-    public static func buildEither(first component: (any Encodable)?) -> (any Encodable)? {
+    public static func buildBlock<T: Encodable & Sendable>(_ component: T?) -> T? {
         component
     }
 
-    public static func buildEither(second component: (any Encodable)?) -> (any Encodable)? {
+    public static func buildEither<T: Encodable & Sendable>(first component: T?) -> T? {
         component
     }
 
-    public static func buildOptional(_ component: (any Encodable)??) -> (any Encodable)? {
+    public static func buildEither<T: Encodable & Sendable>(second component: T?) -> T? {
+        component
+    }
+
+    public static func buildOptional<T: Encodable & Sendable>(_ component: T??) -> T? {
         component.flatMap { $0 }
     }
 }

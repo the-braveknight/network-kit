@@ -49,12 +49,4 @@ extension Endpoint {
     /// This typealias is a shorthand for `RequestType.ResponseBody`, letting you
     /// refer directly to the return type of the underlying request.
     public typealias ResponseBody = RequestType.ResponseBody
-
-    /// Builds an HTTPRequest from this endpoint and a base URL string.
-    ///
-    /// - Parameter baseURL: The base URL string to construct the full request URL
-    /// - Returns: A configured HTTPRequest
-    public func httpRequest(baseURL: String) throws -> HTTPRequest {
-        try request.httpRequest(baseURL: baseURL)
-    }
 }

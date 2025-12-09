@@ -19,28 +19,49 @@ public struct RequestComponents: Sendable {
     /// The query parameters to append to the request URL.
     public var queryItems: [Query]
 
-    /// The body data for the request.
-    public var body: Data?
+    /// The body content for the request.
+    public var body: RequestBody?
+
+    /// The encoder to use for this request. If nil, the service's encoder is used.
+    public var encoder: (any RequestEncoder)?
+
+    /// The decoder to use for this request. If nil, the service's decoder is used.
+    public var decoder: (any ResponseDecoder)?
 
     /// Creates a new request components instance with the specified configuration.
     public init(
         headerFields: HTTPFields = HTTPFields(),
         queryItems: [Query] = [],
-        body: Data? = nil
+        body: RequestBody? = nil,
+        encoder: (any RequestEncoder)? = nil,
+        decoder: (any ResponseDecoder)? = nil
     ) {
         self.headerFields = headerFields
         self.queryItems = queryItems
         self.body = body
+        self.encoder = encoder
+        self.decoder = decoder
     }
 }
 
-/// A URL query parameter.
-public struct Query: Sendable {
-    public let name: String
-    public let value: String?
+/// Represents the body content of an HTTP request.
+public enum RequestBody: Sendable {
+    /// Raw data body (already encoded or binary data).
+    case data(Data)
 
-    public init(name: String, value: String?) {
-        self.name = name
-        self.value = value
+    /// An encodable value that will be encoded using the service's encoder.
+    case encodable(@Sendable (any RequestEncoder) throws -> Data)
+
+    /// Encodes the body using the provided encoder.
+    ///
+    /// - Parameter encoder: The encoder to use for encodable bodies
+    /// - Returns: The encoded data
+    public func encode(using encoder: some RequestEncoder) throws -> Data {
+        switch self {
+        case .data(let data):
+            return data
+        case .encodable(let encode):
+            return try encode(encoder)
+        }
     }
 }
