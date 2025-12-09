@@ -7,7 +7,7 @@
 
 import SwiftUI
 import SwiftData
-import Melatonin
+import NetworkKit
 
 struct PostsView: View {
     // MARK: - SwiftData

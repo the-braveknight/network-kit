@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import Melatonin
+import NetworkKit
 
 struct GetPosts: Endpoint {
     var user: User.ID? = nil

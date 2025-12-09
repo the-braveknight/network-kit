@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import Melatonin
+import NetworkKit
 
 struct HTTPGoRESTService: HTTPService, GoRESTService {
     let baseURL = URL(string: "https://gorest.co.in/public/v2")!

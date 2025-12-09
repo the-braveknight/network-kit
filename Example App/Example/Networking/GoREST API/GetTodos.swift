@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import Melatonin
+import NetworkKit
 
 struct GetTodos: Endpoint {
     var page: Int = 1
