@@ -5,7 +5,7 @@ A type-safe, declarative HTTP networking library for Swift built on [swift-http-
 ## Features
 
 - Type-safe request building with `Request` and `Endpoint` protocols
-- Declarative API using result builders for queries and body
+- Declarative API using result builders for headers, queries, and body
 - Built-in HTTP method types: `Get`, `Post`, `Put`, `Patch`, `Delete`, `Head`, `Options`
 - HTTP headers via `HTTPField.Name` from swift-http-types
 - Multipart form data support
@@ -57,7 +57,7 @@ let request = Get<User>("users", "42")
 // POST request with headers and body
 let request = Post<User>("users")
     .header(.authorization, "Bearer token123")
-    .header(.accept, "application/json")
+    .header(.contentType, "application/json")
     .body(CreateUserInput(name: "John", email: "john@example.com"))
 ```
 
@@ -104,7 +104,7 @@ Get<User>("users")
 
 ### Type-Safe Headers
 
-Use the built-in header types for a more declarative API:
+Use the built-in header types with the `headers` result builder:
 
 ```swift
 Get<User>("users")
@@ -143,7 +143,9 @@ struct APIKey: Authorization.Scheme {
 
 // Usage
 Get<User>("users")
-    .header(Authorization(APIKey(key: "secret")))
+    .headers {
+        Authorization(APIKey(key: "secret"))
+    }
 ```
 
 ## Query Parameters

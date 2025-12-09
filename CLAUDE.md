@@ -86,9 +86,10 @@ Get<User>("users")
 Sources/
 ├── NetworkKit/                    # Core module
 │   ├── Body/                      # MultiPartForm and related types
+│   │   └── MultiPartForm.swift
 │   ├── Headers/                   # HTTPHeader protocol and implementations
 │   │   ├── HTTPHeader.swift       # Base protocol
-│   │   ├── Authorization.swift    # Authorization with Scheme protocol
+│   │   ├── Authorization.swift    # Authorization with Scheme protocol (Bearer, Basic)
 │   │   ├── ContentType.swift      # ContentType, Accept, MIMEType
 │   │   ├── AcceptLanguage.swift   # AcceptLanguage header
 │   │   ├── ContentLanguage.swift  # ContentLanguage header
@@ -96,27 +97,43 @@ Sources/
 │   │   ├── UserAgent.swift        # UserAgent header
 │   │   ├── ContentLength.swift    # ContentLength header
 │   │   └── CacheControl.swift     # CacheControl with Directive
-│   ├── Request/                   # Request, Endpoint, RequestComponents
-│   │   └── Methods/               # Get, Post, Put, Patch, Delete, Head, Options
-│   └── Service/                   # Response, NetworkKitError
+│   ├── Request/                   # Request protocol and components
+│   │   ├── Request.swift          # Request protocol
+│   │   ├── Request+Modifiers.swift # header(), headers(), queries(), body(), timeout()
+│   │   ├── RequestComponents.swift # RequestComponents container
+│   │   ├── Endpoint.swift         # Endpoint protocol
+│   │   └── Methods/               # HTTP method implementations
+│   │       ├── Get.swift
+│   │       ├── Post.swift
+│   │       ├── Put.swift
+│   │       ├── Patch.swift
+│   │       ├── Delete.swift
+│   │       ├── Head.swift
+│   │       └── Options.swift
+│   └── Service/                   # Response and error types
+│       ├── Response.swift
+│       ├── NetworkKitError.swift
+│       ├── RequestEncoder.swift
+│       └── ResponseDecoder.swift
 └── NetworkKitFoundation/          # URLSession driver
     └── HTTPService.swift          # HTTPService protocol and implementation
 
 Tests/
-└── NetworkKitTests/               # Unit tests
+├── NetworkKitTests/               # Core module tests
+└── NetworkKitFoundationTests/     # Foundation driver tests
 ```
 
 ## Code Style
 
 - Use `HTTPField.Name` for simple header names (e.g., `.authorization`, `.contentType`)
-- Use `HTTPHeader` types for type-safe declarative headers
+- Use `HTTPHeader` types with `headers { }` builder for type-safe declarative headers
 - Use result builders for declarative configuration
 - Keep `Sendable` conformance on all public types
 - Use `URL` for `baseURL` in `HTTPService`
 
 ## Testing
 
-Tests are located in `Tests/NetworkKitTests/`. Run with `swift test`.
+Tests are in `Tests/NetworkKitTests/` and `Tests/NetworkKitFoundationTests/`. Run with `swift test`. 69 tests across 12 suites.
 
 ## Platform Support
 
