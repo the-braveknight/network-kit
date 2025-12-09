@@ -8,6 +8,10 @@
 import Foundation
 import HTTPTypes
 
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
+
 /// The base protocol for all HTTP network requests.
 ///
 /// `Request` defines the structure and behavior for making HTTP requests in a type-safe, composable way.
