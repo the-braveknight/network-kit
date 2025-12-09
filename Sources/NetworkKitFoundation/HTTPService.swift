@@ -89,20 +89,8 @@ extension HTTPService {
     public func load<R: Request>(_ request: R) async throws -> Response<R.ResponseBody> {
         let httpRequest = try request.httpRequest(baseURL: baseURL.absoluteString)
         let (data, httpResponse) = try await session.data(for: httpRequest)
-
-        do {
-            let body = try decodeResponse(R.ResponseBody.self, from: data)
-            return Response(body: body, status: httpResponse.status, headerFields: httpResponse.headerFields)
-        } catch {
-            throw NetworkKitError.decodingFailed(
-                response: Response(body: data, status: httpResponse.status, headerFields: httpResponse.headerFields),
-                underlyingError: error
-            )
-        }
-    }
-
-    private func decodeResponse<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
-        try decoder.decode(type, from: data)
+        let body = try decoder.decode(R.ResponseBody.self, from: data)
+        return Response(body: body, status: httpResponse.status, headerFields: httpResponse.headerFields)
     }
 }
 

@@ -29,7 +29,6 @@ import HTTPTypes
 ///         Query(name: "notify", value: "true")
 ///     }
 ///     .body(CreateUserInput(name: "John Doe", email: "john@example.com"))
-///     .timeout(30)
 ///
 /// // Build the HTTPRequest
 /// let httpRequest = try createUserRequest.httpRequest(baseURL: "https://api.example.com")
@@ -66,10 +65,10 @@ extension Request {
     ///
     /// - Parameter baseURL: The base URL string to which the request path will be appended
     /// - Returns: A fully configured `HTTPRequest` ready to be executed
-    /// - Throws: ``NetworkKitError/invalidURL`` if the URL cannot be constructed
+    /// - Throws: `URLError(.badURL)` if the URL cannot be constructed
     public func httpRequest(baseURL: String) throws -> HTTPRequest {
         guard var urlComponents = URLComponents(string: baseURL) else {
-            throw NetworkKitError.invalidURL
+            throw URLError(.badURL)
         }
 
         // Append path components
@@ -89,7 +88,7 @@ extension Request {
         // Extract components for HTTPRequest
         guard let scheme = urlComponents.scheme,
               let host = urlComponents.host else {
-            throw NetworkKitError.invalidURL
+            throw URLError(.badURL)
         }
 
         // Build authority (host + optional port)

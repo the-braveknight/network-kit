@@ -91,13 +91,6 @@ struct RequestTests {
         #expect(httpRequest.path == "/v1/users")
     }
 
-    // MARK: - Request Configuration
-
-    @Test func timeout() throws {
-        let request = Get<Data>("users").timeout(30)
-        #expect(request.components.timeout == 30)
-    }
-
     // MARK: - Body
 
     @Test func rawDataBody() throws {

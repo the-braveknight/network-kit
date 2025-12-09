@@ -33,9 +33,8 @@ swift test
 
 ### Key Types
 
-- **`RequestComponents`** - Container for request configuration (headerFields as `HTTPFields`, queryItems, body, timeout).
+- **`RequestComponents`** - Container for request configuration (headerFields as `HTTPFields`, queryItems, body).
 - **`Response<Body>`** - Response wrapper with decoded body, `HTTPResponse.Status`, and `HTTPFields`.
-- **`NetworkKitError`** - Error type with cases: `invalidURL`, `invalidResponse`, `decodingFailed`.
 - Uses `HTTPRequest`, `HTTPResponse`, `HTTPFields` from `swift-http-types`.
 
 ### Headers
@@ -78,31 +77,31 @@ Get<User>("users")
 - `QueryBuilder` - For `.queries { }` modifier
 - `HTTPBodyBuilder` - For `.body { }` modifier
 - `HTTPHeadersBuilder` - For `.headers { }` modifier
-- `MultiPartFormFieldBuilder` - For `.multiPartForm { }` modifier
 
 ## Directory Structure
 
 ```
 Sources/
 ├── NetworkKit/                    # Core module
-│   ├── Body/                      # MultiPartForm and related types
-│   │   └── MultiPartForm.swift
+│   ├── Endpoint.swift             # Endpoint protocol
 │   ├── Headers/                   # HTTPHeader protocol and implementations
-│   │   ├── HTTPHeader.swift       # Base protocol
+│   │   ├── HTTPHeader.swift
 │   │   ├── Authorization.swift    # Authorization with Scheme protocol (Bearer, Basic)
 │   │   ├── ContentType.swift      # ContentType, Accept, MIMEType
-│   │   ├── AcceptLanguage.swift   # AcceptLanguage header
-│   │   ├── ContentLanguage.swift  # ContentLanguage header
-│   │   ├── Language.swift         # Language type
-│   │   ├── UserAgent.swift        # UserAgent header
-│   │   ├── ContentLength.swift    # ContentLength header
-│   │   └── CacheControl.swift     # CacheControl with Directive
+│   │   ├── AcceptLanguage.swift
+│   │   ├── ContentLanguage.swift
+│   │   ├── Language.swift
+│   │   ├── UserAgent.swift
+│   │   ├── ContentLength.swift
+│   │   └── CacheControl.swift
 │   ├── Request/                   # Request protocol and components
-│   │   ├── Request.swift          # Request protocol
-│   │   ├── Request+Modifiers.swift # header(), headers(), queries(), body(), timeout()
-│   │   ├── RequestComponents.swift # RequestComponents container
-│   │   ├── Endpoint.swift         # Endpoint protocol
-│   │   └── Methods/               # HTTP method implementations
+│   │   ├── Request.swift
+│   │   ├── Request+Headers.swift  # header(), headers(), HTTPHeadersBuilder
+│   │   ├── Request+Query.swift    # query(), queries(), QueryBuilder
+│   │   ├── Request+Body.swift     # body(), HTTPBodyBuilder
+│   │   ├── RequestComponents.swift
+│   │   ├── RequestEncoder.swift
+│   │   └── Methods/
 │   │       ├── Get.swift
 │   │       ├── Post.swift
 │   │       ├── Put.swift
@@ -110,17 +109,15 @@ Sources/
 │   │       ├── Delete.swift
 │   │       ├── Head.swift
 │   │       └── Options.swift
-│   └── Service/                   # Response and error types
+│   └── Response/
 │       ├── Response.swift
-│       ├── NetworkKitError.swift
-│       ├── RequestEncoder.swift
 │       └── ResponseDecoder.swift
-└── NetworkKitFoundation/          # URLSession driver
-    └── HTTPService.swift          # HTTPService protocol and implementation
+└── NetworkKitFoundation/
+    └── HTTPService.swift
 
 Tests/
-├── NetworkKitTests/               # Core module tests
-└── NetworkKitFoundationTests/     # Foundation driver tests
+├── NetworkKitTests/
+└── NetworkKitFoundationTests/
 ```
 
 ## Code Style
@@ -133,7 +130,7 @@ Tests/
 
 ## Testing
 
-Tests are in `Tests/NetworkKitTests/` and `Tests/NetworkKitFoundationTests/`. Run with `swift test`. 69 tests across 12 suites.
+Tests are in `Tests/NetworkKitTests/` and `Tests/NetworkKitFoundationTests/`. Run with `swift test`.
 
 ## Platform Support
 

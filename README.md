@@ -8,7 +8,6 @@ A type-safe, declarative HTTP networking library for Swift built on [swift-http-
 - Declarative API using result builders for headers, queries, and body
 - Built-in HTTP method types: `Get`, `Post`, `Put`, `Patch`, `Delete`, `Head`, `Options`
 - HTTP headers via `HTTPField.Name` from swift-http-types
-- Multipart form data support
 - Automatic JSON encoding/decoding
 - Modular design: Core + Foundation driver
 - Linux support via FoundationNetworking
@@ -187,20 +186,6 @@ Post<User>("users")
     .body(input, encoder: encoder)
 ```
 
-## Multipart Form Data
-
-```swift
-Post<UploadResponse>("upload")
-    .multiPartForm(boundary: "Boundary-\(UUID().uuidString)") {
-        Text("Hello")
-            .contentDisposition(name: "message")
-
-        File(data: imageData)
-            .contentDisposition(name: "file", filename: "image.png")
-            .contentType("image/png")
-    }
-```
-
 ## Custom Decoder
 
 ```swift
@@ -212,24 +197,6 @@ struct MyAPIService: HTTPService {
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         decoder.dateDecodingStrategy = .iso8601
         return decoder
-    }
-}
-```
-
-## Error Handling
-
-```swift
-do {
-    let response = try await service.load(request)
-} catch let error as NetworkKitError {
-    switch error {
-    case .invalidURL:
-        print("Invalid URL")
-    case .invalidResponse:
-        print("Invalid response")
-    case .decodingFailed(let response, let underlyingError):
-        print("Status: \(response.status)")
-        print("Error: \(underlyingError)")
     }
 }
 ```
