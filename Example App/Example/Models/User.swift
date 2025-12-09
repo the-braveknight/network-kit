@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class User: Decodable, Identifiable {
+final class User: Decodable, Identifiable, Sendable {
     @Attribute(.unique) var id: Int
     var name: String
     var email: String

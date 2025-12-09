@@ -1,30 +1,30 @@
-// swift-tools-version: 5.7
+// swift-tools-version: 6.0
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
 
 let package = Package(
-    name: "Melatonin",
+    name: "NetworkKit",
     platforms: [
-        .macOS(.v10_15),
-        .iOS(.v13),
-        .watchOS(.v6),
-        .tvOS(.v13)
+        .macOS(.v13),
+        .iOS(.v16),
+        .watchOS(.v9),
+        .tvOS(.v16)
     ],
     products: [
         .library(
-            name: "Melatonin",
-            targets: ["Melatonin"]
+            name: "NetworkKit",
+            targets: ["NetworkKit"]
         ),
     ],
     targets: [
         .target(
-            name: "Melatonin",
+            name: "NetworkKit",
             path: "Sources"
         ),
         .testTarget(
-            name: "MelatoninTests",
-            dependencies: ["Melatonin"],
+            name: "NetworkKitTests",
+            dependencies: ["NetworkKit"],
             path: "Tests"
         )
     ]

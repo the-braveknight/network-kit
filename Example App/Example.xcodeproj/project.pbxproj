@@ -27,7 +27,6 @@
 		96C005212BC4749C00134D6C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96C005202BC4749C00134D6C /* ContentView.swift */; };
 		96C005232BC4749D00134D6C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 96C005222BC4749D00134D6C /* Assets.xcassets */; };
 		96C005272BC4749D00134D6C /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 96C005262BC4749D00134D6C /* Preview Assets.xcassets */; };
-		96C005392BC474F700134D6C /* GoRESTCall.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96C0052D2BC474F700134D6C /* GoRESTCall.swift */; };
 		96C0053A2BC474F700134D6C /* GetPosts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96C0052E2BC474F700134D6C /* GetPosts.swift */; };
 		96C0053B2BC474F700134D6C /* GetTodos.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96C0052F2BC474F700134D6C /* GetTodos.swift */; };
 		96C0053C2BC474F700134D6C /* GetUsers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96C005302BC474F700134D6C /* GetUsers.swift */; };
@@ -62,7 +61,6 @@
 		96C005222BC4749D00134D6C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		96C005242BC4749D00134D6C /* Example.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Example.entitlements; sourceTree = "<group>"; };
 		96C005262BC4749D00134D6C /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
-		96C0052D2BC474F700134D6C /* GoRESTCall.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GoRESTCall.swift; sourceTree = "<group>"; };
 		96C0052E2BC474F700134D6C /* GetPosts.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GetPosts.swift; sourceTree = "<group>"; };
 		96C0052F2BC474F700134D6C /* GetTodos.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GetTodos.swift; sourceTree = "<group>"; };
 		96C005302BC474F700134D6C /* GetUsers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GetUsers.swift; sourceTree = "<group>"; };
@@ -190,7 +188,6 @@
 			isa = PBXGroup;
 			children = (
 				967659082D157F3200F4A405 /* PaginatedResponse.swift */,
-				96C0052D2BC474F700134D6C /* GoRESTCall.swift */,
 				96C005302BC474F700134D6C /* GetUsers.swift */,
 				96C0052E2BC474F700134D6C /* GetPosts.swift */,
 				96C0052F2BC474F700134D6C /* GetTodos.swift */,
@@ -274,7 +271,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1530;
-				LastUpgradeCheck = 1620;
+				LastUpgradeCheck = 2610;
 				TargetAttributes = {
 					96C0051A2BC4749C00134D6C = {
 						CreatedOnToolsVersion = 15.3;
@@ -336,7 +333,6 @@
 				967659072D157CCE00F4A405 /* URLSession+example.swift in Sources */,
 				96C0053A2BC474F700134D6C /* GetPosts.swift in Sources */,
 				966F23082BC48B6900DD8990 /* Todo.swift in Sources */,
-				96C005392BC474F700134D6C /* GoRESTCall.swift in Sources */,
 				96C0053B2BC474F700134D6C /* GetTodos.swift in Sources */,
 				966F23042BC48B4A00DD8990 /* User.swift in Sources */,
 				96468E932C27373200151E84 /* TodoRow.swift in Sources */,
@@ -411,6 +407,7 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -466,6 +463,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;
@@ -480,7 +478,10 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Example/Preview Content\"";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -518,7 +519,10 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Example/Preview Content\"";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;

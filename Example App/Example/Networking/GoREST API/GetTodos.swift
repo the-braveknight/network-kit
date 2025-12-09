@@ -12,14 +12,15 @@ struct GetTodos: Endpoint {
     var page: Int = 1
     var recordsPerPage: Int = 10
     var title: String? = nil
-    
-    var call: some HTTPCall {
-        GoRESTCall()
-            .path("/public/v2/todos")
+
+    var request: some Request<[Todo]> {
+        Get<[Todo]>("todos")
             .queries {
                 Query(name: "page", value: String(page))
                 Query(name: "per_page", value: String(recordsPerPage))
-                Query(name: "title", value: title)
+                if let title {
+                    Query(name: "title", value: title)
+                }
             }
     }
 }
