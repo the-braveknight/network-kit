@@ -5,11 +5,7 @@
 //  Created by Zaid Rahhawi on 12/29/22.
 //
 
-import Foundation
-
-#if canImport(FoundationNetworking)
-import FoundationNetworking
-#endif
+import HTTPTypes
 
 /// A protocol for defining reusable, type-safe endpoint specifications.
 ///
@@ -25,9 +21,7 @@ import FoundationNetworking
 ///
 ///     var request: some Request<User> {
 ///         Get<User>("users", userID)
-///             .headers {
-///                 Accept(.json)
-///             }
+///             .header(.accept, "application/json")
 ///     }
 /// }
 ///
@@ -56,23 +50,11 @@ extension Endpoint {
     /// refer directly to the return type of the underlying request.
     public typealias ResponseBody = RequestType.ResponseBody
 
-    /// Builds a URLRequest from this endpoint and a base URL.
+    /// Builds an HTTPRequest from this endpoint and a base URL string.
     ///
-    /// - Parameter baseURL: The base URL to construct the full request URL
-    /// - Returns: A configured URLRequest
-    public func urlRequest(baseURL: URL) throws -> URLRequest {
-        try request.urlRequest(baseURL: baseURL)
-    }
-}
-
-// MARK: - HTTPService Extension for Endpoint
-
-extension HTTPService {
-    /// Loads an endpoint and returns the decoded response.
-    ///
-    /// - Parameter endpoint: The endpoint to load
-    /// - Returns: An ``HTTPResponse`` containing the decoded body and HTTP metadata
-    public func load<E: Endpoint>(_ endpoint: E) async throws -> HTTPResponse<E.Response> {
-        try await load(endpoint.request)
+    /// - Parameter baseURL: The base URL string to construct the full request URL
+    /// - Returns: A configured HTTPRequest
+    public func httpRequest(baseURL: String) throws -> HTTPRequest {
+        try request.httpRequest(baseURL: baseURL)
     }
 }

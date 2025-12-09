@@ -6,10 +6,7 @@
 //
 
 import Foundation
-
-#if canImport(FoundationNetworking)
-import FoundationNetworking
-#endif
+import HTTPTypes
 
 /// The base protocol for all HTTP network requests.
 ///
@@ -25,20 +22,17 @@ import FoundationNetworking
 ///
 /// // Build a POST request with headers, query items, and body
 /// let createUserRequest = Post<User>("users")
-///     .headers {
-///         Authorization(Bearer(token: "token123"))
-///         ContentType(.json)
-///         Accept(.json)
-///     }
+///     .header(.authorization, "Bearer token123")
+///     .header(.contentType, "application/json")
+///     .header(.accept, "application/json")
 ///     .queries {
 ///         Query(name: "notify", value: "true")
 ///     }
 ///     .body(CreateUserInput(name: "John Doe", email: "john@example.com"))
 ///     .timeout(30)
 ///
-/// // Send the request using HTTPService
-/// let response = try await service.send(createUserRequest)
-/// print("Created user: \(response.body.name)")
+/// // Build the HTTPRequest
+/// let httpRequest = try createUserRequest.httpRequest(baseURL: "https://api.example.com")
 /// ```
 public protocol Request<ResponseBody>: Identifiable, Sendable {
     /// The type of the decoded response body this request expects.
@@ -50,7 +44,7 @@ public protocol Request<ResponseBody>: Identifiable, Sendable {
     var id: UUID { get }
 
     /// The HTTP method for this request (e.g., GET, POST, PUT, DELETE).
-    var method: HTTPMethod { get }
+    var method: HTTPRequest.Method { get }
 
     /// The path components that make up the request URL path.
     ///
@@ -65,47 +59,60 @@ public protocol Request<ResponseBody>: Identifiable, Sendable {
     init(_ pathComponents: String...)
 }
 
-// MARK: - URLRequest Builder
+// MARK: - HTTPRequest Builder
 
 extension Request {
-    /// Builds a `URLRequest` from this request and a base URL.
+    /// Builds an `HTTPRequest` from this request and a base URL string.
     ///
-    /// - Parameter baseURL: The base URL to which the request path will be appended
-    /// - Returns: A fully configured `URLRequest` ready to be executed
+    /// - Parameter baseURL: The base URL string to which the request path will be appended
+    /// - Returns: A fully configured `HTTPRequest` ready to be executed
     /// - Throws: ``NetworkKitError/invalidURL`` if the URL cannot be constructed
-    public func urlRequest(baseURL: URL) throws -> URLRequest {
-        guard var urlComponents = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
+    public func httpRequest(baseURL: String) throws -> HTTPRequest {
+        guard var urlComponents = URLComponents(string: baseURL) else {
             throw NetworkKitError.invalidURL
         }
 
-        // Build path by appending to existing base URL path
-        let basePath = urlComponents.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        // Append path components
         let requestPath = pathComponents.joined(separator: "/")
-        urlComponents.path = "/" + [basePath, requestPath].filter { !$0.isEmpty }.joined(separator: "/")
+        if !requestPath.isEmpty {
+            let basePath = urlComponents.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            urlComponents.path = "/" + [basePath, requestPath].filter { !$0.isEmpty }.joined(separator: "/")
+        }
 
         // Add query items
         if !components.queryItems.isEmpty {
-            urlComponents.queryItems = components.queryItems.map(\.urlQueryItem)
+            urlComponents.queryItems = components.queryItems.map { query in
+                URLQueryItem(name: query.name, value: query.value)
+            }
         }
 
-        guard let url = urlComponents.url else {
+        // Extract components for HTTPRequest
+        guard let scheme = urlComponents.scheme,
+              let host = urlComponents.host else {
             throw NetworkKitError.invalidURL
         }
 
-        // Create URLRequest
-        var urlRequest = URLRequest(url: url)
-        urlRequest.httpMethod = method.rawValue
-        urlRequest.timeoutInterval = components.timeout
-        urlRequest.cachePolicy = components.cachePolicy
-        urlRequest.allowsCellularAccess = components.allowsCellularAccess
-        urlRequest.httpBody = components.body
-
-        // Add headers
-        for header in components.headers {
-            urlRequest.setValue(header.value, forHTTPHeaderField: header.field)
+        // Build authority (host + optional port)
+        var authority = host
+        if let port = urlComponents.port {
+            authority += ":\(port)"
         }
 
-        return urlRequest
+        // Build path with query string
+        var path = urlComponents.path.isEmpty ? "/" : urlComponents.path
+        if let query = urlComponents.percentEncodedQuery {
+            path += "?" + query
+        }
+
+        let request = HTTPRequest(
+            method: method,
+            scheme: scheme,
+            authority: authority,
+            path: path,
+            headerFields: components.headerFields
+        )
+        
+        return request
     }
 }
 
@@ -118,31 +125,32 @@ extension Request {
     ///
     /// - Parameter baseURL: The base URL to construct the full request URL
     /// - Returns: A formatted cURL command string
-    public func cURLDescription(baseURL: URL) throws -> String {
-        let request = try urlRequest(baseURL: baseURL)
+    public func cURLDescription(baseURL: String) throws -> String {
+        let request = try httpRequest(baseURL: baseURL)
 
-        guard let url = request.url, let method = request.httpMethod else {
-            throw NetworkKitError.invalidURL
+        var curlComponents = ["$ curl -v"]
+        curlComponents.append("-X \(request.method.rawValue)")
+
+        // Add headers
+        for field in request.headerFields {
+            let escapedValue = field.value.replacingOccurrences(of: "\"", with: "\\\"")
+            curlComponents.append("-H \"\(field.name): \(escapedValue)\"")
         }
 
-        var components = ["$ curl -v"]
-        components.append("-X \(method)")
-
-        let headers = request.allHTTPHeaderFields ?? [:]
-        for header in headers.sorted(by: { $0.key < $1.key }) {
-            let escapedValue = header.value.replacingOccurrences(of: "\"", with: "\\\"")
-            components.append("-H \"\(header.key): \(escapedValue)\"")
-        }
-
-        if let httpBodyData = request.httpBody {
-            let httpBody = String(decoding: httpBodyData, as: UTF8.self)
+        // Add body
+        if let body = components.body {
+            let httpBody = String(decoding: body, as: UTF8.self)
             var escapedBody = httpBody.replacingOccurrences(of: "\\\"", with: "\\\\\"")
             escapedBody = escapedBody.replacingOccurrences(of: "\"", with: "\\\"")
-            components.append("-d \"\(escapedBody)\"")
+            curlComponents.append("-d \"\(escapedBody)\"")
         }
 
-        components.append("\"\(url.absoluteString)\"")
+        // Add URL
+        let scheme = request.scheme ?? "https"
+        let authority = request.authority ?? ""
+        let path = request.path ?? "/"
+        curlComponents.append("\"\(scheme)://\(authority)\(path)\"")
 
-        return components.joined(separator: " \\\n")
+        return curlComponents.joined(separator: " \\\n")
     }
 }

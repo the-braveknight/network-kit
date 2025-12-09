@@ -8,6 +8,7 @@
 import Testing
 @testable import NetworkKit
 import Foundation
+import HTTPTypes
 
 // MARK: - Text Field Tests
 
@@ -68,37 +69,22 @@ struct FileFieldTests {
 @Suite("Content Disposition Tests")
 struct ContentDispositionTests {
     @Test func formDataDisposition() {
-        let disposition = ContentDisposition(.formData)
-        #expect(disposition.field == "Content-Disposition")
-        #expect(disposition.value == "form-data")
-    }
+        let text = Text("test")
+            .contentDisposition(name: "field")
 
-    @Test func inlineDisposition() {
-        let disposition = ContentDisposition(.inline)
-        #expect(disposition.value == "inline")
-    }
-
-    @Test func attachmentDisposition() {
-        let disposition = ContentDisposition(.attachment)
-        #expect(disposition.value == "attachment")
-    }
-
-    @Test func dispositionWithName() {
-        let disposition = ContentDisposition(.formData, .name("fieldName"))
-        #expect(disposition.value.contains("form-data"))
-        #expect(disposition.value.contains("name=\"fieldName\""))
+        let dispositionHeader = text.headers[.contentDisposition]
+        #expect(dispositionHeader?.contains("form-data") == true)
+        #expect(dispositionHeader?.contains("name=\"field\"") == true)
     }
 
     @Test func dispositionWithFilename() {
-        let disposition = ContentDisposition(.formData, .name("file"), .filename("image.png"))
-        #expect(disposition.value.contains("form-data"))
-        #expect(disposition.value.contains("name=\"file\""))
-        #expect(disposition.value.contains("filename=\"image.png\""))
-    }
+        let file = File(data: Data())
+            .contentDisposition(name: "file", filename: "image.png")
 
-    @Test func dispositionWithUTF8Filename() {
-        let disposition = ContentDisposition(.formData, .filename("文件.txt", encoding: .utf8))
-        #expect(disposition.value.contains("filename*=UTF-8''"))
+        let dispositionHeader = file.headers[.contentDisposition]
+        #expect(dispositionHeader?.contains("form-data") == true)
+        #expect(dispositionHeader?.contains("name=\"file\"") == true)
+        #expect(dispositionHeader?.contains("filename=\"image.png\"") == true)
     }
 }
 
@@ -113,12 +99,11 @@ struct MultiPartFormStructureTests {
 
     @Test func formContentType() {
         let form = MultiPartForm(boundary: "MyBoundary", fields: [])
-        let contentType = form.contentType
+        let contentType = form.contentTypeValue
 
-        #expect(contentType.field == "Content-Type")
-        #expect(contentType.value.contains("multipart/form-data"))
-        #expect(contentType.value.contains("boundary"))
-        #expect(contentType.value.contains("MyBoundary"))
+        #expect(contentType.contains("multipart/form-data"))
+        #expect(contentType.contains("boundary"))
+        #expect(contentType.contains("MyBoundary"))
     }
 
     @Test func emptyFormData() {
@@ -131,7 +116,7 @@ struct MultiPartFormStructureTests {
     @Test func singleTextField() {
         let form = MultiPartForm(boundary: "Boundary") {
             Text("Hello")
-                .contentDisposition(.formData, .name("message"))
+                .contentDisposition(name: "message")
         }
 
         let dataString = String(data: form.data, encoding: .utf8)!
@@ -145,9 +130,9 @@ struct MultiPartFormStructureTests {
     @Test func multipleFields() {
         let form = MultiPartForm(boundary: "Boundary") {
             Text("Value1")
-                .contentDisposition(.formData, .name("field1"))
+                .contentDisposition(name: "field1")
             Text("Value2")
-                .contentDisposition(.formData, .name("field2"))
+                .contentDisposition(name: "field2")
         }
 
         let dataString = String(data: form.data, encoding: .utf8)!
@@ -161,8 +146,8 @@ struct MultiPartFormStructureTests {
     @Test func fieldWithContentType() {
         let form = MultiPartForm(boundary: "Boundary") {
             Text("JSON data")
-                .contentDisposition(.formData, .name("data"))
-                .contentType(.json)
+                .contentDisposition(name: "data")
+                .contentType("application/json")
         }
 
         let dataString = String(data: form.data, encoding: .utf8)!
@@ -174,8 +159,8 @@ struct MultiPartFormStructureTests {
         let imageData = Data("FakeImageData".utf8)
         let form = MultiPartForm(boundary: "Boundary") {
             File(data: imageData)
-                .contentDisposition(.formData, .name("avatar"), .filename("profile.jpg"))
-                .contentType(.jpeg)
+                .contentDisposition(name: "avatar", filename: "profile.jpg")
+                .contentType("image/jpeg")
         }
 
         let dataString = String(data: form.data, encoding: .utf8)!
@@ -188,8 +173,8 @@ struct MultiPartFormStructureTests {
     @Test func headerOrderingContentDispositionFirst() {
         let form = MultiPartForm(boundary: "Boundary") {
             Text("Test")
-                .contentType(.text)
-                .contentDisposition(.formData, .name("field"))
+                .contentType("text/plain")
+                .contentDisposition(name: "field")
         }
 
         let dataString = String(data: form.data, encoding: .utf8)!
@@ -206,22 +191,22 @@ struct MultiPartFormStructureTests {
 
 @Suite("MultiPartForm Request Integration Tests")
 struct MultiPartFormRequestTests {
-    let baseURL = URL(string: "https://api.example.com")!
+    let baseURL = "https://api.example.com"
 
     @Test func requestWithMultiPartForm() throws {
         let request = Post<Data>("upload")
             .multiPartForm(boundary: "TestBoundary") {
                 Text("Hello")
-                    .contentDisposition(.formData, .name("message"))
+                    .contentDisposition(name: "message")
             }
 
-        let urlRequest = try request.urlRequest(baseURL: baseURL)
+        let httpRequest = try request.httpRequest(baseURL: baseURL)
 
-        let contentType = try #require(urlRequest.value(forHTTPHeaderField: "Content-Type"))
+        let contentType = try #require(httpRequest.headerFields[.contentType])
         #expect(contentType.contains("multipart/form-data"))
         #expect(contentType.contains("boundary"))
 
-        let body = try #require(urlRequest.httpBody)
+        let body = try #require(request.components.body)
         let bodyString = try #require(String(data: body, encoding: .utf8))
         #expect(bodyString.contains("Hello"))
     }
@@ -230,23 +215,22 @@ struct MultiPartFormRequestTests {
         let request = Post<Data>("upload")
             .multiPartForm(boundary: "ComplexBoundary") {
                 Text("John Doe")
-                    .contentDisposition(.formData, .name("fullName"))
-                    .contentType(.text)
+                    .contentDisposition(name: "fullName")
+                    .contentType("text/plain")
 
                 Text("john@example.com")
-                    .contentDisposition(.formData, .name("email"))
+                    .contentDisposition(name: "email")
 
                 File(data: Data("ProfileImageData".utf8))
-                    .contentDisposition(.formData, .name("avatar"), .filename("avatar.png"))
-                    .contentType(.png)
+                    .contentDisposition(name: "avatar", filename: "avatar.png")
+                    .contentType("image/png")
 
                 File(data: Data("ResumeData".utf8))
-                    .contentDisposition(.formData, .name("resume"), .filename("resume.pdf"))
-                    .contentType(.pdf)
+                    .contentDisposition(name: "resume", filename: "resume.pdf")
+                    .contentType("application/pdf")
             }
 
-        let urlRequest = try request.urlRequest(baseURL: baseURL)
-        let body = try #require(urlRequest.httpBody)
+        let body = try #require(request.components.body)
         let bodyString = try #require(String(data: body, encoding: .utf8))
 
         #expect(bodyString.contains("John Doe"))
@@ -263,16 +247,15 @@ struct MultiPartFormRequestTests {
         let request = Post<Data>("upload")
             .multiPartForm(boundary: "Boundary") {
                 Text("Required")
-                    .contentDisposition(.formData, .name("required"))
+                    .contentDisposition(name: "required")
 
                 if includeOptional {
                     Text("Optional")
-                        .contentDisposition(.formData, .name("optional"))
+                        .contentDisposition(name: "optional")
                 }
             }
 
-        let urlRequest = try request.urlRequest(baseURL: baseURL)
-        let body = try #require(urlRequest.httpBody)
+        let body = try #require(request.components.body)
         let bodyString = try #require(String(data: body, encoding: .utf8))
 
         #expect(bodyString.contains("Required"))
@@ -285,16 +268,15 @@ struct MultiPartFormRequestTests {
         let request = Post<Data>("upload")
             .multiPartForm(boundary: "Boundary") {
                 Text("Required")
-                    .contentDisposition(.formData, .name("required"))
+                    .contentDisposition(name: "required")
 
                 if includeOptional {
                     Text("Optional")
-                        .contentDisposition(.formData, .name("optional"))
+                        .contentDisposition(name: "optional")
                 }
             }
 
-        let urlRequest = try request.urlRequest(baseURL: baseURL)
-        let body = try #require(urlRequest.httpBody)
+        let body = try #require(request.components.body)
         let bodyString = try #require(String(data: body, encoding: .utf8))
 
         #expect(bodyString.contains("Required"))
@@ -309,7 +291,7 @@ struct BoundaryFormatTests {
     @Test func boundaryInData() {
         let form = MultiPartForm(boundary: "ABC123") {
             Text("Test")
-                .contentDisposition(.formData, .name("field"))
+                .contentDisposition(name: "field")
         }
 
         let dataString = String(data: form.data, encoding: .utf8)!
@@ -323,9 +305,9 @@ struct BoundaryFormatTests {
 
     @Test func multipleFieldBoundaries() {
         let form = MultiPartForm(boundary: "SEP") {
-            Text("A").contentDisposition(.formData, .name("a"))
-            Text("B").contentDisposition(.formData, .name("b"))
-            Text("C").contentDisposition(.formData, .name("c"))
+            Text("A").contentDisposition(name: "a")
+            Text("B").contentDisposition(name: "b")
+            Text("C").contentDisposition(name: "c")
         }
 
         let dataString = String(data: form.data, encoding: .utf8)!

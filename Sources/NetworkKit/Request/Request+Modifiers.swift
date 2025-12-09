@@ -6,54 +6,40 @@
 //
 
 import Foundation
+import HTTPTypes
 
-#if canImport(FoundationNetworking)
-import FoundationNetworking
-#endif
-
-// MARK: - Headers Modifier
+// MARK: - Header Modifiers
 
 extension Request {
-    /// Adds HTTP headers to the request using a result builder.
+    /// Adds a header field to the request.
+    ///
+    /// ```swift
+    /// Get<User>("users")
+    ///     .header(.authorization, "Bearer token")
+    ///     .header(.accept, "application/json")
+    /// ```
+    public func header(_ name: HTTPField.Name, _ value: String) -> Self {
+        var copy = self
+        copy.components.headerFields[name] = value
+        return copy
+    }
+
+    /// Adds multiple headers to the request using a result builder.
     ///
     /// ```swift
     /// Get<User>("users")
     ///     .headers {
-    ///         Authorization(Bearer(token: "token"))
+    ///         Authorization(.bearer(token: "token"))
     ///         Accept(.json)
+    ///         ContentType(.json)
     ///     }
     /// ```
     public func headers(@HTTPHeadersBuilder _ builder: () -> [any HTTPHeader]) -> Self {
         var copy = self
-        copy.components.headers.append(contentsOf: builder())
+        for header in builder() {
+            copy.components.headerFields[header.name] = header.value
+        }
         return copy
-    }
-
-    /// Adds a single header to the request.
-    public func header(_ header: some HTTPHeader) -> Self {
-        var copy = self
-        copy.components.headers.append(header)
-        return copy
-    }
-
-    /// Sets the Authorization header.
-    public func authorization(_ auth: some Auth) -> Self {
-        header(Authorization(auth))
-    }
-
-    /// Sets the Content-Type header.
-    public func contentType(_ mimeType: MIMEType) -> Self {
-        header(ContentType(mimeType))
-    }
-
-    /// Sets the Accept header.
-    public func accept(_ mimeType: MIMEType) -> Self {
-        header(Accept(mimeType))
-    }
-
-    /// Sets the User-Agent header.
-    public func userAgent(_ value: String) -> Self {
-        header(UserAgent(value))
     }
 }
 
@@ -76,9 +62,9 @@ extension Request {
     }
 
     /// Adds a single query parameter to the request.
-    public func query(_ query: Query) -> Self {
+    public func query(name: String, value: String?) -> Self {
         var copy = self
-        copy.components.queryItems.append(query)
+        copy.components.queryItems.append(Query(name: name, value: value))
         return copy
     }
 }
@@ -100,10 +86,10 @@ extension Request {
     /// - Parameters:
     ///   - body: The encodable value to use as the request body
     ///   - encoder: The encoder to use (defaults to `JSONEncoder()`)
-    public func body<Body: Encodable>(_ body: Body, encoder: some RequestEncoder = JSONEncoder()) -> Self {
+    public func body<Body: Encodable>(_ body: Body, encoder: JSONEncoder = JSONEncoder()) -> Self {
         var copy = self
         copy.components.body = try? encoder.encode(body)
-        copy.components.headers.append(ContentType(.json))
+        copy.components.headerFields[.contentType] = "application/json"
         return copy
     }
 
@@ -125,7 +111,7 @@ extension Request {
     /// - Parameters:
     ///   - encoder: The encoder to use (defaults to `JSONEncoder()`)
     ///   - builder: A closure that returns an encodable value using result builder syntax
-    public func body(encoder: some RequestEncoder = JSONEncoder(), @HTTPBodyBuilder _ builder: () -> (any Encodable)?) -> Self {
+    public func body(encoder: JSONEncoder = JSONEncoder(), @HTTPBodyBuilder _ builder: () -> (any Encodable)?) -> Self {
         var copy = self
         if let body = builder() {
             if let data = body as? Data {
@@ -133,7 +119,7 @@ extension Request {
             } else {
                 copy.components.body = try? encoder.encode(body)
             }
-            copy.components.headers.append(ContentType(.json))
+            copy.components.headerFields[.contentType] = "application/json"
         }
         return copy
     }
@@ -152,57 +138,7 @@ extension Request {
     }
 }
 
-// MARK: - Cache Policy Modifier
-
-extension Request {
-    /// Sets the cache policy for the request.
-    public func cachePolicy(_ policy: URLRequest.CachePolicy) -> Self {
-        var copy = self
-        copy.components.cachePolicy = policy
-        return copy
-    }
-}
-
-// MARK: - Cellular Access Modifier
-
-extension Request {
-    /// Sets whether the request can use cellular network access.
-    public func allowsCellularAccess(_ allowed: Bool) -> Self {
-        var copy = self
-        copy.components.allowsCellularAccess = allowed
-        return copy
-    }
-}
-
 // MARK: - Result Builders
-
-/// Result builder for constructing arrays of HTTP headers.
-@resultBuilder
-public struct HTTPHeadersBuilder {
-    public static func buildExpression(_ header: some HTTPHeader) -> [any HTTPHeader] {
-        [header]
-    }
-
-    public static func buildOptional(_ component: [any HTTPHeader]?) -> [any HTTPHeader] {
-        component ?? []
-    }
-
-    public static func buildEither(first component: [any HTTPHeader]) -> [any HTTPHeader] {
-        component
-    }
-
-    public static func buildEither(second component: [any HTTPHeader]) -> [any HTTPHeader] {
-        component
-    }
-
-    public static func buildArray(_ components: [[any HTTPHeader]]) -> [any HTTPHeader] {
-        components.flatMap { $0 }
-    }
-
-    public static func buildBlock(_ components: [any HTTPHeader]...) -> [any HTTPHeader] {
-        components.flatMap { $0 }
-    }
-}
 
 /// Result builder for constructing arrays of query parameters.
 @resultBuilder
@@ -271,19 +207,42 @@ public enum HTTPBodyBuilder {
     }
 }
 
-// MARK: - Query Type
-
-/// A URL query parameter.
-public struct Query: Sendable {
-    public let name: String
-    public let value: String?
-
-    public var urlQueryItem: URLQueryItem {
-        URLQueryItem(name: name, value: value)
+/// Result builder for constructing arrays of HTTP headers.
+///
+/// `HTTPHeadersBuilder` enables the declarative syntax used in the `headers(_:)` modifier.
+///
+/// ```swift
+/// .headers {
+///     Authorization(.bearer(token: "token"))
+///     Accept(.json)
+///     if includeCustomHeader {
+///         CustomHeader(name: "X-Custom", value: "value")
+///     }
+/// }
+/// ```
+@resultBuilder
+public struct HTTPHeadersBuilder {
+    public static func buildExpression(_ header: some HTTPHeader) -> [any HTTPHeader] {
+        [header]
     }
 
-    public init(name: String, value: String?) {
-        self.name = name
-        self.value = value
+    public static func buildOptional(_ component: [any HTTPHeader]?) -> [any HTTPHeader] {
+        component ?? []
+    }
+
+    public static func buildEither(first component: [any HTTPHeader]) -> [any HTTPHeader] {
+        component
+    }
+
+    public static func buildEither(second component: [any HTTPHeader]) -> [any HTTPHeader] {
+        component
+    }
+
+    public static func buildArray(_ components: [[any HTTPHeader]]) -> [any HTTPHeader] {
+        components.flatMap { $0 }
+    }
+
+    public static func buildBlock(_ components: [any HTTPHeader]...) -> [any HTTPHeader] {
+        components.flatMap { $0 }
     }
 }

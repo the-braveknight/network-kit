@@ -16,16 +16,39 @@ let package = Package(
             name: "NetworkKit",
             targets: ["NetworkKit"]
         ),
+        .library(
+            name: "NetworkKitFoundation",
+            targets: ["NetworkKitFoundation"]
+        ),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/apple/swift-http-types.git", from: "1.0.0"),
     ],
     targets: [
         .target(
             name: "NetworkKit",
-            path: "Sources"
+            dependencies: [
+                .product(name: "HTTPTypes", package: "swift-http-types"),
+            ],
+            path: "Sources/NetworkKit"
+        ),
+        .target(
+            name: "NetworkKitFoundation",
+            dependencies: [
+                "NetworkKit",
+                .product(name: "HTTPTypesFoundation", package: "swift-http-types"),
+            ],
+            path: "Sources/NetworkKitFoundation"
         ),
         .testTarget(
             name: "NetworkKitTests",
             dependencies: ["NetworkKit"],
-            path: "Tests"
+            path: "Tests/NetworkKitTests"
+        ),
+        .testTarget(
+            name: "NetworkKitFoundationTests",
+            dependencies: ["NetworkKit", "NetworkKitFoundation"],
+            path: "Tests/NetworkKitFoundationTests"
         )
     ]
 )

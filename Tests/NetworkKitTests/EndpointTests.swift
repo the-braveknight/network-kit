@@ -8,12 +8,7 @@
 import Testing
 @testable import NetworkKit
 import Foundation
-
-// MARK: - Mock Service
-
-struct MockService: HTTPService {
-    let baseURL = URL(string: "https://api.example.com")!
-}
+import HTTPTypes
 
 // MARK: - Test Types
 
@@ -34,7 +29,7 @@ struct GetUser: Endpoint {
 
     var request: some Request<User> {
         Get<User>("users", userID)
-            .accept(.json)
+            .header(.accept, "application/json")
     }
 }
 
@@ -43,7 +38,7 @@ struct CreateUser: Endpoint {
 
     var request: some Request<User> {
         Post<User>("users")
-            .authorization(.bearer(token: "test-token"))
+            .header(.authorization, "Bearer test-token")
             .body(input)
     }
 }
@@ -65,28 +60,28 @@ struct SearchUsers: Endpoint {
 
 @Suite("Endpoint Tests")
 struct EndpointTests {
-    let baseURL = URL(string: "https://api.example.com")!
+    let baseURL = "https://api.example.com"
 
     @Test func getEndpoint() throws {
         let endpoint = GetUser(userID: "42")
-        let urlRequest = try endpoint.urlRequest(baseURL: baseURL)
+        let httpRequest = try endpoint.httpRequest(baseURL: baseURL)
 
-        #expect(urlRequest.httpMethod == "GET")
-        #expect(urlRequest.url?.path == "/users/42")
-        #expect(urlRequest.value(forHTTPHeaderField: "Accept") == "application/json")
+        #expect(httpRequest.method == .get)
+        #expect(httpRequest.path == "/users/42")
+        #expect(httpRequest.headerFields[.accept] == "application/json")
     }
 
     @Test func postEndpoint() throws {
         let input = CreateUserInput(name: "John", email: "john@example.com")
         let endpoint = CreateUser(input: input)
-        let urlRequest = try endpoint.urlRequest(baseURL: baseURL)
+        let httpRequest = try endpoint.httpRequest(baseURL: baseURL)
 
-        #expect(urlRequest.httpMethod == "POST")
-        #expect(urlRequest.url?.path == "/users")
-        #expect(urlRequest.value(forHTTPHeaderField: "Authorization") == "Bearer test-token")
-        #expect(urlRequest.value(forHTTPHeaderField: "Content-Type") == "application/json")
+        #expect(httpRequest.method == .post)
+        #expect(httpRequest.path == "/users")
+        #expect(httpRequest.headerFields[.authorization] == "Bearer test-token")
+        #expect(httpRequest.headerFields[.contentType] == "application/json")
 
-        let body = try #require(urlRequest.httpBody)
+        let body = try #require(endpoint.request.components.body)
         let json = try #require(String(data: body, encoding: .utf8))
 
         #expect(json.contains("John"))
@@ -95,13 +90,12 @@ struct EndpointTests {
 
     @Test func endpointWithQueries() throws {
         let endpoint = SearchUsers(query: "john", page: 2)
-        let urlRequest = try endpoint.urlRequest(baseURL: baseURL)
+        let httpRequest = try endpoint.httpRequest(baseURL: baseURL)
 
-        let url = try #require(urlRequest.url)
-        let query = try #require(url.query)
+        let path = try #require(httpRequest.path)
 
-        #expect(query.contains("q=john"))
-        #expect(query.contains("page=2"))
+        #expect(path.contains("q=john"))
+        #expect(path.contains("page=2"))
     }
 
     @Test func endpointResponseType() {
@@ -115,27 +109,26 @@ struct EndpointTests {
     }
 }
 
-// MARK: - HTTPService Tests
+// MARK: - Request URL Tests
 
-@Suite("HTTPService Tests")
-struct HTTPServiceTests {
-    let baseURL = URL(string: "https://api.example.com")!
-
-    @Test func serviceHasDefaultSession() {
-        let service = MockService()
-        #expect(service.session === URLSession.shared)
-    }
-
-    @Test func serviceHasDefaultDecoder() {
-        let service = MockService()
-        // Just verify we can access the decoder
-        _ = service.decoder
-    }
+@Suite("Request URL Tests")
+struct RequestURLTests {
+    let baseURL = "https://api.example.com"
 
     @Test func requestBuildsCorrectURL() throws {
         let request = Get<Data>("users", "42")
-        let urlRequest = try request.urlRequest(baseURL: baseURL)
+        let httpRequest = try request.httpRequest(baseURL: baseURL)
 
-        #expect(urlRequest.url?.absoluteString == "https://api.example.com/users/42")
+        #expect(httpRequest.scheme == "https")
+        #expect(httpRequest.authority == "api.example.com")
+        #expect(httpRequest.path == "/users/42")
+    }
+
+    @Test func requestWithBaseURLPath() throws {
+        let baseWithPath = "https://api.example.com/v1"
+        let request = Get<Data>("users", "42")
+        let httpRequest = try request.httpRequest(baseURL: baseWithPath)
+
+        #expect(httpRequest.path == "/v1/users/42")
     }
 }

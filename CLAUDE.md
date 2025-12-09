@@ -4,7 +4,10 @@ This file provides guidance for Claude Code when working with the NetworkKit cod
 
 ## Project Overview
 
-NetworkKit is a type-safe, declarative HTTP networking library for Swift. It provides a clean API for building and executing HTTP requests with compile-time safety for headers, query parameters, and request bodies.
+NetworkKit is a type-safe, declarative HTTP networking library for Swift built on Apple's `swift-http-types`. It provides a clean API for building HTTP requests with compile-time safety. The library is split into two modules:
+
+- **NetworkKit** - Core module for building `HTTPRequest` objects (no URLSession dependency)
+- **NetworkKitFoundation** - Driver module for executing requests via URLSession
 
 ## Build Commands
 
@@ -18,59 +21,102 @@ swift test
 
 ## Architecture
 
-### Core Protocols
+### Core Protocols (NetworkKit)
 
 - **`Request`** - Base protocol for HTTP requests. Generic over `ResponseBody`. Concrete types: `Get`, `Post`, `Put`, `Patch`, `Delete`, `Head`, `Options`.
 - **`Endpoint`** - Wrapper protocol for reusable, parameterized request definitions. Contains a `request` property.
-- **`HTTPService`** - Protocol for network services. Provides `baseURL`, `session`, `decoder`, and `load()` methods.
-- **`HTTPHeader`** - Protocol for type-safe HTTP headers (`field` and `value` properties).
+- **`HTTPHeader`** - Protocol for type-safe header definitions with `name` and `value`.
+
+### Driver Protocol (NetworkKitFoundation)
+
+- **`HTTPService`** - Protocol for network services. Provides `baseURL` (as `URL`), `session`, `decoder`, and `load()` methods.
 
 ### Key Types
 
-- **`RequestComponents`** - Container for request configuration (headers, queryItems, body, timeout, cachePolicy).
-- **`HTTPResponse<Body>`** - Response wrapper with decoded body and `HTTPURLResponse`.
+- **`RequestComponents`** - Container for request configuration (headerFields as `HTTPFields`, queryItems, body, timeout).
+- **`Response<Body>`** - Response wrapper with decoded body, `HTTPResponse.Status`, and `HTTPFields`.
 - **`NetworkKitError`** - Error type with cases: `invalidURL`, `invalidResponse`, `decodingFailed`.
+- Uses `HTTPRequest`, `HTTPResponse`, `HTTPFields` from `swift-http-types`.
 
-### Type Safety
+### Headers
 
-The library enforces type safety throughout:
-- Headers are `[any HTTPHeader]` not `[String: String]`
-- Query items are `[Query]` not `[URLQueryItem]`
-- MIME types use `MIMEType` enum not raw strings
-- Authorization uses `Bearer`, `Basic` types
+Two approaches for setting headers:
+
+**Simple headers using `HTTPField.Name`:**
+
+```swift
+Get<User>("users")
+    .header(.authorization, "Bearer token")
+    .header(.accept, "application/json")
+```
+
+**Type-safe headers using `HTTPHeader` protocol:**
+
+```swift
+Get<User>("users")
+    .headers {
+        Authorization(.bearer(token: "my-token"))
+        Accept(.json)
+        ContentType(.json)
+        UserAgent("MyApp/1.0")
+        AcceptLanguage(.english)
+    }
+```
+
+**Built-in header types:**
+- `Authorization` - With extensible `Scheme` protocol: `Bearer`, `Basic`, or custom
+- `Accept` - Accept header with `MIMEType`
+- `ContentType` - Content-Type header with `MIMEType`
+- `UserAgent` - User-Agent header
+- `AcceptLanguage` - Accept-Language with `Language` and optional quality
+- `ContentLanguage` - Content-Language header
+- `ContentLength` - Content-Length header
+- `CacheControl` - Cache-Control with `Directive`
 
 ### Result Builders
 
-- `HTTPHeadersBuilder` - For `.headers { }` modifier
 - `QueryBuilder` - For `.queries { }` modifier
 - `HTTPBodyBuilder` - For `.body { }` modifier
+- `HTTPHeadersBuilder` - For `.headers { }` modifier
 - `MultiPartFormFieldBuilder` - For `.multiPartForm { }` modifier
-- `MIMETypeParameterBuilder` - For MIME type parameters
 
 ## Directory Structure
 
 ```
-Sources/NetworkKit/
-├── Body/              # MultiPartForm and related types
-├── Headers/           # HTTPHeader protocol and implementations
-│   ├── Authorization/ # Bearer, Basic, Auth types
-│   └── Language/      # AcceptLanguage, ContentLanguage
-├── Request/           # Request, Endpoint, RequestComponents
-│   └── Methods/       # Get, Post, Put, Patch, Delete, Head, Options
-└── Service/           # HTTPService, HTTPResponse, error types
+Sources/
+├── NetworkKit/                    # Core module
+│   ├── Body/                      # MultiPartForm and related types
+│   ├── Headers/                   # HTTPHeader protocol and implementations
+│   │   ├── HTTPHeader.swift       # Base protocol
+│   │   ├── Authorization.swift    # Authorization with Scheme protocol
+│   │   ├── ContentType.swift      # ContentType, Accept, MIMEType
+│   │   ├── AcceptLanguage.swift   # AcceptLanguage header
+│   │   ├── ContentLanguage.swift  # ContentLanguage header
+│   │   ├── Language.swift         # Language type
+│   │   ├── UserAgent.swift        # UserAgent header
+│   │   ├── ContentLength.swift    # ContentLength header
+│   │   └── CacheControl.swift     # CacheControl with Directive
+│   ├── Request/                   # Request, Endpoint, RequestComponents
+│   │   └── Methods/               # Get, Post, Put, Patch, Delete, Head, Options
+│   └── Service/                   # Response, NetworkKitError
+└── NetworkKitFoundation/          # URLSession driver
+    └── HTTPService.swift          # HTTPService protocol and implementation
+
+Tests/
+└── NetworkKitTests/               # Unit tests
 ```
 
 ## Code Style
 
-- Use type-safe headers via `HTTPHeader` conforming types
-- Prefer `MIMEType.json` over `"application/json"`
+- Use `HTTPField.Name` for simple header names (e.g., `.authorization`, `.contentType`)
+- Use `HTTPHeader` types for type-safe declarative headers
 - Use result builders for declarative configuration
 - Keep `Sendable` conformance on all public types
-- Follow existing naming conventions (e.g., `HTTPHeadersBuilder`, `QueryBuilder`)
+- Use `URL` for `baseURL` in `HTTPService`
 
 ## Testing
 
-Tests are located in `Tests/`. Run with `swift test`.
+Tests are located in `Tests/NetworkKitTests/`. Run with `swift test`.
 
 ## Platform Support
 
@@ -79,3 +125,7 @@ Tests are located in `Tests/`. Run with `swift test`.
 - watchOS 9+
 - tvOS 16+
 - Linux (via FoundationNetworking)
+
+## Dependencies
+
+- [swift-http-types](https://github.com/apple/swift-http-types) - Core HTTP types (`HTTPRequest`, `HTTPResponse`, `HTTPFields`)

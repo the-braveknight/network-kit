@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import HTTPTypes
 
 /// A HEAD request for retrieving headers without the response body.
 ///
@@ -16,16 +17,14 @@ import Foundation
 ///
 /// ```swift
 /// let request = Head<Data>("files", "document.pdf")
-///     .headers {
-///         Authorization(Bearer(token: "token"))
-///     }
+///     .header(.authorization, "Bearer token")
 ///
 /// let response = try await service.load(request)
-/// print("Content-Length: \(response.originalResponse.value(forHTTPHeaderField: "Content-Length"))")
+/// print("Content-Length: \(response.headerFields[.contentLength])")
 /// ```
 public struct Head<ResponseBody: Decodable & Sendable>: Request {
     public let id = UUID()
-    public let method: HTTPMethod = .head
+    public let method: HTTPRequest.Method = .head
     public let pathComponents: [String]
     public var components: RequestComponents
 

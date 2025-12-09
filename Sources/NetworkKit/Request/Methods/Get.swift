@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import HTTPTypes
 
 /// A GET request for retrieving resources from the server.
 ///
@@ -13,9 +14,7 @@ import Foundation
 ///
 /// ```swift
 /// let request = Get<User>("users", "42")
-///     .headers {
-///         Authorization(Bearer(token: "token"))
-///     }
+///     .header(.authorization, "Bearer token")
 ///     .queries {
 ///         Query(name: "include", value: "profile")
 ///     }
@@ -24,7 +23,7 @@ import Foundation
 /// ```
 public struct Get<ResponseBody: Decodable & Sendable>: Request {
     public let id = UUID()
-    public let method: HTTPMethod = .get
+    public let method: HTTPRequest.Method = .get
     public let pathComponents: [String]
     public var components: RequestComponents
 

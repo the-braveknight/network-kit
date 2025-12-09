@@ -8,109 +8,94 @@
 import Testing
 @testable import NetworkKit
 import Foundation
+import HTTPTypes
 
 @Suite("Request Tests")
 struct RequestTests {
-    let baseURL = URL(string: "https://api.example.com")!
+    let baseURL = "https://api.example.com"
 
     // MARK: - HTTP Methods
 
     @Test func getRequest() throws {
         let request = Get<Data>("users", "42")
-        let urlRequest = try request.urlRequest(baseURL: baseURL)
+        let httpRequest = try request.httpRequest(baseURL: baseURL)
 
-        #expect(urlRequest.httpMethod == "GET")
-        #expect(urlRequest.url?.path == "/users/42")
+        #expect(httpRequest.method == .get)
+        #expect(httpRequest.path == "/users/42")
     }
 
     @Test func postRequest() throws {
         let request = Post<Data>("users")
-        let urlRequest = try request.urlRequest(baseURL: baseURL)
+        let httpRequest = try request.httpRequest(baseURL: baseURL)
 
-        #expect(urlRequest.httpMethod == "POST")
-        #expect(urlRequest.url?.path == "/users")
+        #expect(httpRequest.method == .post)
+        #expect(httpRequest.path == "/users")
     }
 
     @Test func putRequest() throws {
         let request = Put<Data>("users", "42")
-        let urlRequest = try request.urlRequest(baseURL: baseURL)
+        let httpRequest = try request.httpRequest(baseURL: baseURL)
 
-        #expect(urlRequest.httpMethod == "PUT")
+        #expect(httpRequest.method == .put)
     }
 
     @Test func patchRequest() throws {
         let request = Patch<Data>("users", "42")
-        let urlRequest = try request.urlRequest(baseURL: baseURL)
+        let httpRequest = try request.httpRequest(baseURL: baseURL)
 
-        #expect(urlRequest.httpMethod == "PATCH")
+        #expect(httpRequest.method == .patch)
     }
 
     @Test func deleteRequest() throws {
         let request = Delete<Data>("users", "42")
-        let urlRequest = try request.urlRequest(baseURL: baseURL)
+        let httpRequest = try request.httpRequest(baseURL: baseURL)
 
-        #expect(urlRequest.httpMethod == "DELETE")
+        #expect(httpRequest.method == .delete)
     }
 
     @Test func headRequest() throws {
         let request = Head<Data>("users")
-        let urlRequest = try request.urlRequest(baseURL: baseURL)
+        let httpRequest = try request.httpRequest(baseURL: baseURL)
 
-        #expect(urlRequest.httpMethod == "HEAD")
+        #expect(httpRequest.method == .head)
     }
 
     @Test func optionsRequest() throws {
         let request = Options<Data>("users")
-        let urlRequest = try request.urlRequest(baseURL: baseURL)
+        let httpRequest = try request.httpRequest(baseURL: baseURL)
 
-        #expect(urlRequest.httpMethod == "OPTIONS")
+        #expect(httpRequest.method == .options)
     }
 
     // MARK: - Path Components
 
     @Test func emptyPath() throws {
         let request = Get<Data>()
-        let urlRequest = try request.urlRequest(baseURL: baseURL)
+        let httpRequest = try request.httpRequest(baseURL: baseURL)
 
-        #expect(urlRequest.url?.path == "/")
+        #expect(httpRequest.path == "/")
     }
 
     @Test func multiplePaths() throws {
         let request = Get<Data>("api", "v2", "users", "profile")
-        let urlRequest = try request.urlRequest(baseURL: baseURL)
+        let httpRequest = try request.httpRequest(baseURL: baseURL)
 
-        #expect(urlRequest.url?.path == "/api/v2/users/profile")
+        #expect(httpRequest.path == "/api/v2/users/profile")
     }
 
     @Test func baseURLWithPath() throws {
-        let baseWithPath = URL(string: "https://api.example.com/v1")!
+        let baseWithPath = "https://api.example.com/v1"
         let request = Get<Data>("users")
-        let urlRequest = try request.urlRequest(baseURL: baseWithPath)
+        let httpRequest = try request.httpRequest(baseURL: baseWithPath)
 
-        #expect(urlRequest.url?.path == "/v1/users")
+        #expect(httpRequest.path == "/v1/users")
     }
 
     // MARK: - Request Configuration
 
     @Test func timeout() throws {
         let request = Get<Data>("users").timeout(30)
-        let urlRequest = try request.urlRequest(baseURL: baseURL)
-
-        #expect(urlRequest.timeoutInterval == 30)
-    }
-
-    @Test func cachePolicy() throws {
-        let request = Get<Data>("users").cachePolicy(.reloadIgnoringLocalCacheData)
-        let urlRequest = try request.urlRequest(baseURL: baseURL)
-
-        #expect(urlRequest.cachePolicy == .reloadIgnoringLocalCacheData)
-    }
-
-    @Test func cellularAccess() throws {
-        let request = Get<Data>("users").allowsCellularAccess(false)
-        let urlRequest = try request.urlRequest(baseURL: baseURL)
-
-        #expect(urlRequest.allowsCellularAccess == false)
+        #expect(request.components.timeout == 30)
     }
 
     // MARK: - Body
@@ -118,9 +103,8 @@ struct RequestTests {
     @Test func rawDataBody() throws {
         let bodyData = Data("test body".utf8)
         let request = Post<Data>("users").body(bodyData)
-        let urlRequest = try request.urlRequest(baseURL: baseURL)
 
-        #expect(urlRequest.httpBody == bodyData)
+        #expect(request.components.body == bodyData)
     }
 
     @Test func encodableBody() throws {
@@ -129,13 +113,13 @@ struct RequestTests {
         }
 
         let request = Post<Data>("users").body(Input(name: "John"))
-        let urlRequest = try request.urlRequest(baseURL: baseURL)
+        let httpRequest = try request.httpRequest(baseURL: baseURL)
 
-        let body = try #require(urlRequest.httpBody)
+        let body = try #require(request.components.body)
         let json = try #require(String(data: body, encoding: .utf8))
 
         #expect(json.contains("John"))
-        #expect(urlRequest.value(forHTTPHeaderField: "Content-Type") == "application/json")
+        #expect(httpRequest.headerFields[.contentType] == "application/json")
     }
 
     @Test func bodyBuilder() throws {
@@ -153,8 +137,7 @@ struct RequestTests {
                 }
             }
 
-        let urlRequest = try request.urlRequest(baseURL: baseURL)
-        let body = try #require(urlRequest.httpBody)
+        let body = try #require(request.components.body)
         let json = try #require(String(data: body, encoding: .utf8))
 
         #expect(json.contains("1"))
@@ -173,7 +156,7 @@ struct RequestTests {
 
     @Test func curlDescription() throws {
         let request = Post<Data>("users")
-            .header(ContentType(.json))
+            .header(.contentType, "application/json")
             .body(Data("{\"name\":\"John\"}".utf8))
 
         let curl = try request.cURLDescription(baseURL: baseURL)

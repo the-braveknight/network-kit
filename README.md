@@ -1,15 +1,16 @@
 # NetworkKit
 
-A type-safe, declarative HTTP networking library for Swift.
+A type-safe, declarative HTTP networking library for Swift built on [swift-http-types](https://github.com/apple/swift-http-types).
 
 ## Features
 
 - Type-safe request building with `Request` and `Endpoint` protocols
-- Declarative API using result builders for headers, queries, and body
+- Declarative API using result builders for queries and body
 - Built-in HTTP method types: `Get`, `Post`, `Put`, `Patch`, `Delete`, `Head`, `Options`
-- Type-safe HTTP headers with `MIMEType`, `Authorization`, `ContentType`, etc.
+- HTTP headers via `HTTPField.Name` from swift-http-types
 - Multipart form data support
 - Automatic JSON encoding/decoding
+- Modular design: Core + Foundation driver
 - Linux support via FoundationNetworking
 
 ## Installation
@@ -18,8 +19,20 @@ Add NetworkKit to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/the-braveknight/NetworkKit.git", from: "1.0.0")
+    .package(url: "https://github.com/the-braveknight/NetworkKit.git", from: "2.0.0")
 ]
+```
+
+Add the targets you need:
+
+```swift
+.target(
+    name: "YourTarget",
+    dependencies: [
+        "NetworkKit",           // Core request building
+        "NetworkKitFoundation", // URLSession execution
+    ]
+)
 ```
 
 ## Quick Start
@@ -27,6 +40,9 @@ dependencies: [
 ### 1. Define your service
 
 ```swift
+import NetworkKit
+import NetworkKitFoundation
+
 struct MyAPIService: HTTPService {
     let baseURL = URL(string: "https://api.example.com")!
 }
@@ -40,10 +56,8 @@ let request = Get<User>("users", "42")
 
 // POST request with headers and body
 let request = Post<User>("users")
-    .headers {
-        Authorization(.bearer(token: "token123"))
-        Accept(.json)
-    }
+    .header(.authorization, "Bearer token123")
+    .header(.accept, "application/json")
     .body(CreateUserInput(name: "John", email: "john@example.com"))
 ```
 
@@ -53,6 +67,7 @@ let request = Post<User>("users")
 let service = MyAPIService()
 let response = try await service.load(request)
 print(response.body.name)
+print(response.status) // HTTPResponse.Status
 ```
 
 ## Endpoints
@@ -65,9 +80,7 @@ struct GetUser: Endpoint {
 
     var request: some Request<User> {
         Get<User>("users", userID)
-            .headers {
-                Accept(.json)
-            }
+            .header(.accept, "application/json")
     }
 }
 
@@ -76,28 +89,61 @@ let endpoint = GetUser(userID: "42")
 let response = try await service.load(endpoint)
 ```
 
-## Type-Safe Headers
+## Headers
 
-NetworkKit provides type-safe headers:
+### Simple Headers
+
+Use `HTTPField.Name` from swift-http-types:
 
 ```swift
-.headers {
-    // Authorization
-    Authorization(.bearer(token: "token"))
-    Authorization(.basic(username: "user", password: "pass"))
+Get<User>("users")
+    .header(.authorization, "Bearer token")
+    .header(.accept, "application/json")
+    .header(.contentType, "application/json")
+```
 
-    // Content types
-    ContentType(.json)
-    Accept(.json)
+### Type-Safe Headers
 
-    // Language
-    AcceptLanguage(.en, .ar(quality: 0.8))
-    ContentLanguage(.en)
+Use the built-in header types for a more declarative API:
 
-    // Others
-    UserAgent("MyApp/1.0")
-    ContentLength(1024)
+```swift
+Get<User>("users")
+    .headers {
+        Authorization(.bearer(token: "my-token"))
+        Accept(.json)
+        ContentType(.json)
+        UserAgent("MyApp/1.0")
+        AcceptLanguage(.english)
+    }
+```
+
+### Available Header Types
+
+- `Authorization` - With extensible schemes: `.bearer(token:)`, `.basic(username:password:)`
+- `Accept` - Accept header with `MIMEType`
+- `ContentType` - Content-Type header with `MIMEType`
+- `UserAgent` - User-Agent header
+- `AcceptLanguage` - Accept-Language header with `Language` and optional quality
+- `ContentLanguage` - Content-Language header
+- `ContentLength` - Content-Length header
+- `CacheControl` - Cache-Control header with directives
+
+### Custom Authorization Schemes
+
+Implement the `Authorization.Scheme` protocol:
+
+```swift
+struct APIKey: Authorization.Scheme {
+    let key: String
+
+    var value: String {
+        "ApiKey \(key)"
+    }
 }
+
+// Usage
+Get<User>("users")
+    .header(Authorization(APIKey(key: "secret")))
 ```
 
 ## Query Parameters
@@ -145,11 +191,11 @@ Post<User>("users")
 Post<UploadResponse>("upload")
     .multiPartForm(boundary: "Boundary-\(UUID().uuidString)") {
         Text("Hello")
-            .contentDisposition(.formData, .name("message"))
+            .contentDisposition(name: "message")
 
         File(data: imageData)
-            .contentDisposition(.formData, .name("file"), .filename("image.png"))
-            .contentType(.png)
+            .contentDisposition(name: "file", filename: "image.png")
+            .contentType("image/png")
     }
 ```
 
@@ -180,11 +226,20 @@ do {
     case .invalidResponse:
         print("Invalid response")
     case .decodingFailed(let response, let underlyingError):
-        print("Status: \(response.statusCode)")
+        print("Status: \(response.status)")
         print("Error: \(underlyingError)")
     }
 }
 ```
+
+## Architecture
+
+NetworkKit is split into two modules:
+
+- **NetworkKit** - Core module for building `HTTPRequest` objects from swift-http-types. No URLSession dependency.
+- **NetworkKitFoundation** - Driver module that executes requests via URLSession using HTTPTypesFoundation.
+
+This design allows for future drivers (e.g., async-http-client for swift-nio).
 
 ## License
 

@@ -6,46 +6,31 @@
 //
 
 import Foundation
+import HTTPTypes
 
 // MARK: - MultiPart Form Field Protocol
 
 public protocol MultiPartFormField: Sendable {
-    var headers: [MultiPartFormFieldHeader] { get }
+    var headers: HTTPFields { get }
     var body: Data { get }
 }
 
 extension MultiPartFormField {
-    public var headers: [MultiPartFormFieldHeader] { [] }
+    public var headers: HTTPFields { HTTPFields() }
 }
-
-// MARK: - MultiPart Form Field Header Protocol
-
-public protocol MultiPartFormFieldHeader: Sendable {
-    var fieldValue: String { get }
-}
-
-extension HTTPHeader where Self: MultiPartFormFieldHeader {
-    public var fieldValue: String {
-        "\(field): \(value)"
-    }
-}
-
-// MARK: - Content-Type as a MultiPartFormFieldHeader
-
-extension ContentType: MultiPartFormFieldHeader {}
-
-// MARK: - Content-Disposition as a MultiPartFormFieldHeader
-
-extension ContentDisposition: MultiPartFormFieldHeader {}
 
 // MARK: - MultiPart Form Field With Additional Headers
 
 public struct MultiPartFormFieldWithAdditionalHeaders<Field: MultiPartFormField>: MultiPartFormField {
-    public let headers: [MultiPartFormFieldHeader]
+    public let headers: HTTPFields
     public let body: Data
 
-    init(field: Field, headers: [MultiPartFormFieldHeader]) {
-        self.headers = field.headers + headers
+    init(field: Field, additionalHeaders: HTTPFields) {
+        var combined = field.headers
+        for header in additionalHeaders {
+            combined[header.name] = header.value
+        }
+        self.headers = combined
         self.body = field.body
     }
 }
@@ -53,16 +38,28 @@ public struct MultiPartFormFieldWithAdditionalHeaders<Field: MultiPartFormField>
 // MARK: - MultiPart Form Field Extensions for Headers
 
 extension MultiPartFormField {
-    public func contentDisposition(_ disposition: Disposition.`Type`, _ parameters: MIMETypeParameter...) -> some MultiPartFormField {
-        MultiPartFormFieldWithAdditionalHeaders(field: self, headers: [ContentDisposition(disposition, parameters: parameters)])
+    /// Adds a Content-Disposition header with form-data disposition.
+    ///
+    /// - Parameters:
+    ///   - name: The form field name
+    ///   - filename: Optional filename for file uploads
+    public func contentDisposition(name: String, filename: String? = nil) -> some MultiPartFormField {
+        var value = "form-data; name=\"\(name)\""
+        if let filename = filename {
+            value += "; filename=\"\(filename)\""
+        }
+        var headers = HTTPFields()
+        headers[.contentDisposition] = value
+        return MultiPartFormFieldWithAdditionalHeaders(field: self, additionalHeaders: headers)
     }
 
-    public func contentDisposition(_ disposition: Disposition.`Type`, @MIMETypeParameterBuilder _ parameters: () -> [MIMETypeParameter]) -> some MultiPartFormField {
-        MultiPartFormFieldWithAdditionalHeaders(field: self, headers: [ContentDisposition(disposition, parameters: parameters)])
-    }
-
-    public func contentType(_ mimeType: MIMEType) -> some MultiPartFormField {
-        MultiPartFormFieldWithAdditionalHeaders(field: self, headers: [ContentType(mimeType)])
+    /// Adds a Content-Type header.
+    ///
+    /// - Parameter mimeType: The MIME type string (e.g., "image/png", "application/json")
+    public func contentType(_ mimeType: String) -> some MultiPartFormField {
+        var headers = HTTPFields()
+        headers[.contentType] = mimeType
+        return MultiPartFormFieldWithAdditionalHeaders(field: self, additionalHeaders: headers)
     }
 }
 
@@ -80,10 +77,13 @@ public struct MultiPartForm: Sendable {
         for field in fields {
             data.append(boundaryData)
 
-            let sortedHeaders = field.headers.sorted { $0 is ContentDisposition && !($1 is ContentDisposition) }
+            // Sort headers so Content-Disposition comes first
+            let sortedHeaders = field.headers.sorted {
+                $0.name == .contentDisposition && $1.name != .contentDisposition
+            }
 
             for header in sortedHeaders {
-                data.append("\(header.fieldValue)\r\n".data(using: .utf8)!)
+                data.append("\(header.name): \(header.value)\r\n".data(using: .utf8)!)
             }
 
             data.append("\r\n".data(using: .utf8)!)
@@ -105,8 +105,8 @@ public struct MultiPartForm: Sendable {
     }
 
     /// The Content-Type header value for this multipart form.
-    public var contentType: ContentType {
-        ContentType(MIMEType(type: .multipart, subType: .formData, parameters: [Boundary(boundary)]))
+    public var contentTypeValue: String {
+        "multipart/form-data; boundary=\(boundary)"
     }
 }
 
@@ -132,14 +132,6 @@ public struct File: MultiPartFormField {
     public init(data: Data) {
         self.body = data
     }
-
-    public init(filePath: String) {
-        let url = URL(fileURLWithPath: filePath)
-        guard let data = try? Data(contentsOf: url) else {
-            preconditionFailure("Could not read file at: \(filePath)")
-        }
-        self.body = data
-    }
 }
 
 // MARK: - Request Extension for MultiPartForm
@@ -151,17 +143,17 @@ extension Request {
     /// Post<Response>("upload")
     ///     .multiPartForm(boundary: "Boundary-\(UUID().uuidString)") {
     ///         Text("Hello")
-    ///             .contentDisposition(.formData, .name("message"))
+    ///             .contentDisposition(name: "message")
     ///         File(data: imageData)
-    ///             .contentDisposition(.formData, .name("file"), .filename("image.png"))
-    ///             .contentType(.png)
+    ///             .contentDisposition(name: "file", filename: "image.png")
+    ///             .contentType("image/png")
     ///     }
     /// ```
     public func multiPartForm(boundary: String, @MultiPartFormFieldBuilder fields: () -> [MultiPartFormField]) -> Self {
         let form = MultiPartForm(boundary: boundary, fields: fields)
         var copy = self
         copy.components.body = form.data
-        copy.components.headers.append(form.contentType)
+        copy.components.headerFields[.contentType] = form.contentTypeValue
         return copy
     }
 }

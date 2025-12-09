@@ -1,11 +1,14 @@
 //
 //  HTTPService.swift
-//  NetworkKit
+//  NetworkKitFoundation
 //
 //  Created by Zaid Rahhawi on 12/19/24.
 //
 
 import Foundation
+import NetworkKit
+import HTTPTypes
+import HTTPTypesFoundation
 
 #if canImport(FoundationNetworking)
 import FoundationNetworking
@@ -62,8 +65,8 @@ public protocol HTTPService: Sendable {
     /// Loads a request and returns the decoded response.
     ///
     /// - Parameter request: The request to load
-    /// - Returns: An ``HTTPResponse`` containing the decoded body and HTTP metadata
-    func load<R: Request>(_ request: R) async throws -> HTTPResponse<R.ResponseBody>
+    /// - Returns: A ``Response`` containing the decoded body and HTTP metadata
+    func load<R: Request>(_ request: R) async throws -> Response<R.ResponseBody>
 }
 
 // MARK: - Default Implementations
@@ -83,20 +86,16 @@ extension HTTPService where Decoder == JSONDecoder {
 // MARK: - Load Implementation
 
 extension HTTPService {
-    public func load<R: Request>(_ request: R) async throws -> HTTPResponse<R.ResponseBody> {
-        let urlRequest = try request.urlRequest(baseURL: baseURL)
-        let (data, response) = try await session.data(for: urlRequest)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw NetworkKitError.invalidResponse
-        }
+    public func load<R: Request>(_ request: R) async throws -> Response<R.ResponseBody> {
+        let httpRequest = try request.httpRequest(baseURL: baseURL.absoluteString)
+        let (data, httpResponse) = try await session.data(for: httpRequest)
 
         do {
             let body = try decodeResponse(R.ResponseBody.self, from: data)
-            return HTTPResponse(body: body, originalResponse: httpResponse)
+            return Response(body: body, status: httpResponse.status, headerFields: httpResponse.headerFields)
         } catch {
             throw NetworkKitError.decodingFailed(
-                response: HTTPResponse(body: data, originalResponse: httpResponse),
+                response: Response(body: data, status: httpResponse.status, headerFields: httpResponse.headerFields),
                 underlyingError: error
             )
         }
@@ -104,5 +103,17 @@ extension HTTPService {
 
     private func decodeResponse<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
         try decoder.decode(type, from: data)
+    }
+}
+
+// MARK: - HTTPService Extension for Endpoint
+
+extension HTTPService {
+    /// Loads an endpoint and returns the decoded response.
+    ///
+    /// - Parameter endpoint: The endpoint to load
+    /// - Returns: A ``Response`` containing the decoded body and HTTP metadata
+    public func load<E: Endpoint>(_ endpoint: E) async throws -> Response<E.Response> {
+        try await load(endpoint.request)
     }
 }

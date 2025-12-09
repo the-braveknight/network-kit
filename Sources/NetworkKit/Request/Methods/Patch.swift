@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import HTTPTypes
 
 /// A PATCH request for partially updating resources on the server.
 ///
@@ -13,16 +14,14 @@ import Foundation
 ///
 /// ```swift
 /// let request = Patch<User>("users", "42")
-///     .headers {
-///         ContentType(.json)
-///     }
+///     .header(.contentType, "application/json")
 ///     .body(PatchUserInput(name: "New Name"))
 ///
 /// let response = try await service.load(request)
 /// ```
 public struct Patch<ResponseBody: Decodable & Sendable>: Request {
     public let id = UUID()
-    public let method: HTTPMethod = .patch
+    public let method: HTTPRequest.Method = .patch
     public let pathComponents: [String]
     public var components: RequestComponents
 

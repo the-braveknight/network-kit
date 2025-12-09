@@ -6,53 +6,42 @@
 //
 
 import Foundation
+import HTTPTypes
 
 struct PaginationMetadata {
     let currentPage: Int
     let totalPages: Int
     let totalCount: Int
     let recordsPerPage: Int
-    
+
     init(totalCount: Int, totalPages: Int, recordsPerPage: Int, currentPage: Int) {
         self.currentPage = currentPage
         self.totalPages = totalPages
         self.totalCount = totalCount
         self.recordsPerPage = recordsPerPage
     }
-    
-    init(from httpURLResponse: HTTPURLResponse) throws {
-        guard let currentPage = httpURLResponse.value(forHTTPHeaderField: "x-pagination-page") else {
+
+    init(from headerFields: HTTPFields) throws {
+        guard let currentPageStr = headerFields[HTTPField.Name("x-pagination-page")!],
+              let currentPage = Int(currentPageStr) else {
             throw NSError()
         }
-        
-        guard let currentPage = Int(currentPage) else {
+
+        guard let totalPagesStr = headerFields[HTTPField.Name("x-pagination-pages")!],
+              let totalPages = Int(totalPagesStr) else {
             throw NSError()
         }
-        
-        guard let totalPages = httpURLResponse.value(forHTTPHeaderField: "x-pagination-pages") else {
+
+        guard let totalCountStr = headerFields[HTTPField.Name("x-pagination-total")!],
+              let totalCount = Int(totalCountStr) else {
             throw NSError()
         }
-        
-        guard let totalPages = Int(totalPages) else {
+
+        guard let perPageStr = headerFields[HTTPField.Name("x-pagination-limit")!],
+              let perPage = Int(perPageStr) else {
             throw NSError()
         }
-        
-        guard let totalCount = httpURLResponse.value(forHTTPHeaderField: "x-pagination-total") else {
-            throw NSError()
-        }
-        
-        guard let totalCount = Int(totalCount) else {
-            throw NSError()
-        }
-        
-        guard let perPage = httpURLResponse.value(forHTTPHeaderField: "x-pagination-limit") else {
-            throw NSError()
-        }
-        
-        guard let perPage = Int(perPage) else {
-            throw NSError()
-        }
-        
+
         self.currentPage = currentPage
         self.totalPages = totalPages
         self.totalCount = totalCount
@@ -69,24 +58,24 @@ extension PaginationMetadata {
     var firstPage: Int {
         return 1
     }
-    
+
     var lastPage: Int {
         return totalPages
     }
-    
+
     var nextPage: Int? {
         guard currentPage < totalPages else {
             return nil
         }
-        
+
         return currentPage + 1
     }
-    
+
     var previousPage: Int? {
         guard currentPage > 1 else {
             return nil
         }
-        
+
         return currentPage - 1
     }
 }

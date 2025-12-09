@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import HTTPTypes
 
 /// An OPTIONS request for retrieving supported HTTP methods for a resource.
 ///
@@ -18,11 +19,11 @@ import Foundation
 /// let request = Options<Data>("users")
 ///
 /// let response = try await service.load(request)
-/// print("Allowed: \(response.originalResponse.value(forHTTPHeaderField: "Allow"))")
+/// print("Allowed: \(response.headerFields[.allow])")
 /// ```
 public struct Options<ResponseBody: Decodable & Sendable>: Request {
     public let id = UUID()
-    public let method: HTTPMethod = .options
+    public let method: HTTPRequest.Method = .options
     public let pathComponents: [String]
     public var components: RequestComponents
 

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		9623C3252EE7B11900992A85 /* NetworkKit in Frameworks */ = {isa = PBXBuildFile; productRef = 9623C3242EE7B11900992A85 /* NetworkKit */; };
+		9623C3282EE89AAA00992A85 /* NetworkKitFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 9623C3272EE89AAA00992A85 /* NetworkKitFoundation */; };
 		962532192C2F9E4E00DDF7F5 /* Dopamine in Frameworks */ = {isa = PBXBuildFile; productRef = 962532182C2F9E4E00DDF7F5 /* Dopamine */; };
 		9625321C2C2FA0B900DDF7F5 /* Dopamine in Frameworks */ = {isa = PBXBuildFile; productRef = 9625321B2C2FA0B900DDF7F5 /* Dopamine */; };
 		9634C1992D1ACF6300280A73 /* GoRESTService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9634C1982D1ACF5E00280A73 /* GoRESTService.swift */; };
@@ -81,6 +82,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9623C3252EE7B11900992A85 /* NetworkKit in Frameworks */,
+				9623C3282EE89AAA00992A85 /* NetworkKitFoundation in Frameworks */,
 				9625321C2C2FA0B900DDF7F5 /* Dopamine in Frameworks */,
 				962532192C2F9E4E00DDF7F5 /* Dopamine in Frameworks */,
 			);
@@ -89,6 +91,13 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		9623C3262EE89AAA00992A85 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		96468E912C27371100151E84 /* Todos */ = {
 			isa = PBXGroup;
 			children = (
@@ -147,6 +156,7 @@
 			isa = PBXGroup;
 			children = (
 				96C0051D2BC4749C00134D6C /* Example */,
+				9623C3262EE89AAA00992A85 /* Frameworks */,
 				96C0051C2BC4749C00134D6C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -258,6 +268,7 @@
 				962532182C2F9E4E00DDF7F5 /* Dopamine */,
 				9625321B2C2FA0B900DDF7F5 /* Dopamine */,
 				9623C3242EE7B11900992A85 /* NetworkKit */,
+				9623C3272EE89AAA00992A85 /* NetworkKitFoundation */,
 			);
 			productName = Example;
 			productReference = 96C0051B2BC4749C00134D6C /* Example.app */;
@@ -588,6 +599,11 @@
 		9623C3242EE7B11900992A85 /* NetworkKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = NetworkKit;
+		};
+		9623C3272EE89AAA00992A85 /* NetworkKitFoundation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9623C3232EE7B11900992A85 /* XCLocalSwiftPackageReference "../../Melatonin" */;
+			productName = NetworkKitFoundation;
 		};
 		962532182C2F9E4E00DDF7F5 /* Dopamine */ = {
 			isa = XCSwiftPackageProductDependency;

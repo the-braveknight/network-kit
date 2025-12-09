@@ -38,7 +38,7 @@ struct ExampleApp: App {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(modelContainer)
+        .modelContainer(for: [User.self, Post.self, Todo.self], inMemory: true)
         .environment(router)
         .environment(\.service, service)
         .environment(\.handleError, HandleErrorAction(action: handle))

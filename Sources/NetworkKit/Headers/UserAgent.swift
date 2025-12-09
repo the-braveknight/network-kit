@@ -2,20 +2,26 @@
 //  UserAgent.swift
 //  NetworkKit
 //
-//  Created by Zaid Rahhawi on 4/9/24.
+//  Created by Zaid Rahhawi on 12/19/24.
 //
 
-import Foundation
+import HTTPTypes
 
+/// A User-Agent header.
+///
+/// ## Usage
+///
+/// ```swift
+/// Get<User>("users")
+///     .headers {
+///         UserAgent("MyApp/1.0")
+///     }
+/// ```
 public struct UserAgent: HTTPHeader {
-    public let field: String = "User-Agent"
-    public let agent: String
+    public let name: HTTPField.Name = .userAgent
+    public let value: String
 
-    public var value: String {
-        agent
-    }
-
-    public init(_ agent: String) {
-        self.agent = agent
+    public init(_ value: String) {
+        self.value = value
     }
 }

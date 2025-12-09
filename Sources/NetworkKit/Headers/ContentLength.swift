@@ -2,20 +2,17 @@
 //  ContentLength.swift
 //  NetworkKit
 //
-//  Created by Zaid Rahhawi on 2/25/23.
+//  Created by Zaid Rahhawi on 12/19/24.
 //
 
-import Foundation
+import HTTPTypes
 
+/// A Content-Length header.
 public struct ContentLength: HTTPHeader {
-    public let field: String = "Content-Length"
-    public let contentLength: Int
+    public let name: HTTPField.Name = .contentLength
+    public let value: String
 
-    public var value: String {
-        String(contentLength)
-    }
-
-    public init(_ contentLength: Int) {
-        self.contentLength = contentLength
+    public init(_ length: Int) {
+        self.value = String(length)
     }
 }
