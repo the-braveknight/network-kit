@@ -1,31 +1,54 @@
-// swift-tools-version: 5.7
+// swift-tools-version: 6.0
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
 
 let package = Package(
-    name: "Melatonin",
+    name: "NetworkKit",
     platforms: [
-        .macOS(.v10_15),
-        .iOS(.v13),
-        .watchOS(.v6),
-        .tvOS(.v13)
+        .macOS(.v13),
+        .iOS(.v16),
+        .watchOS(.v9),
+        .tvOS(.v16)
     ],
     products: [
         .library(
-            name: "Melatonin",
-            targets: ["Melatonin"]
+            name: "NetworkKit",
+            targets: ["NetworkKit"]
         ),
+        .library(
+            name: "NetworkKitFoundation",
+            targets: ["NetworkKitFoundation"]
+        ),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/apple/swift-http-types.git", from: "1.0.0"),
     ],
     targets: [
         .target(
-            name: "Melatonin",
-            path: "Sources"
+            name: "NetworkKit",
+            dependencies: [
+                .product(name: "HTTPTypes", package: "swift-http-types"),
+            ],
+            path: "Sources/NetworkKit"
+        ),
+        .target(
+            name: "NetworkKitFoundation",
+            dependencies: [
+                "NetworkKit",
+                .product(name: "HTTPTypesFoundation", package: "swift-http-types"),
+            ],
+            path: "Sources/NetworkKitFoundation"
         ),
         .testTarget(
-            name: "MelatoninTests",
-            dependencies: ["Melatonin"],
-            path: "Tests"
+            name: "NetworkKitTests",
+            dependencies: ["NetworkKit"],
+            path: "Tests/NetworkKitTests"
+        ),
+        .testTarget(
+            name: "NetworkKitFoundationTests",
+            dependencies: ["NetworkKit", "NetworkKitFoundation"],
+            path: "Tests/NetworkKitFoundationTests"
         )
     ]
 )

@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class Todo: Decodable, Identifiable {
+final class Todo: Decodable, Identifiable, Sendable {
     @Attribute(.unique) var id: Int
     var user: User.ID
     var title: String

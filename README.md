@@ -1,235 +1,225 @@
-# Melatonin
+# NetworkKit
 
-Melatonin is a declarative HTTP request library for Swift designed to simplify and streamline the process of building and managing HTTP requests. It combines a composable design inspired by SwiftUI with type-safe networking primitives, enabling clean and reusable code.
-
----
+A type-safe, declarative HTTP networking library for Swift built on [swift-http-types](https://github.com/apple/swift-http-types).
 
 ## Features
 
-- Declarative HTTP request building using `HTTPCall` and `Endpoint`.
-- Built-in modifiers for headers, query parameters, body, and HTTP methods.
-- `HTTPService` protocol for managing networking logic.
-- Type-safe and composable API for better readability and maintainability.
-
----
+- Type-safe request building with `Request` and `Endpoint` protocols
+- Declarative API using result builders for headers, queries, and body
+- Built-in HTTP method types: `Get`, `Post`, `Put`, `Patch`, `Delete`, `Head`, `Options`
+- HTTP headers via `HTTPField.Name` from swift-http-types
+- Automatic JSON encoding/decoding
+- Modular design: Core + Foundation driver
+- Linux support via FoundationNetworking
 
 ## Installation
 
-To use Melatonin in your Swift project, add it as a dependency via Swift Package Manager:
+Add NetworkKit to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/the-braveknight/Melatonin.git", from: "0.3.0")
+    .package(url: "https://github.com/the-braveknight/NetworkKit.git", from: "2.0.0")
 ]
 ```
 
----
-
-## Usage
-
-### Define a Base Call (`HTTPCall`)
-
-The `HTTPCall` protocol is the foundation for HTTP requests. Base requests construct a `URLRequest` pointing to the API URL.
+Add the targets you need:
 
 ```swift
-import Foundation
+.target(
+    name: "YourTarget",
+    dependencies: [
+        "NetworkKit",           // Core request building
+        "NetworkKitFoundation", // URLSession execution
+    ]
+)
+```
 
-struct GoRESTCall: HTTPCall {
-    func build() -> URLRequest {
-        URLRequest(url: URL(string: "https://gorest.co.in/public/v2")!)
-    }
+## Quick Start
+
+### 1. Define your service
+
+```swift
+import NetworkKit
+import NetworkKitFoundation
+
+struct MyAPIService: HTTPURLSessionService {
+    let baseURL = URL(string: "https://api.example.com")!
 }
 ```
 
-### Create an Endpoint (`Endpoint`)
-
-The `Endpoint` protocol is used to define specific API calls. The `call` property composes the request using modifiers.
+### 2. Create a request
 
 ```swift
-import Foundation
+// Simple GET request
+let request = Get<User>("users", "42")
 
-struct GetUsers: Endpoint {
-    var call: some HTTPCall {
-        GoRESTCall()
-            .method(.get)
-            .path("/users")
-            .accept(.json)
+// POST request with headers and body
+let request = Post<User>("users")
+    .headers {
+        Authorization(.bearer(token: "token123"))
+        ContentType(.json)
     }
-}
+    .body(CreateUserInput(name: "John", email: "john@example.com"))
 ```
 
----
-
-## Creating an HTTP Service (`HTTPService`)
-
-The `GoRESTService` actor implements the `HTTPService` protocol and provides methods to perform requests and process responses.
-
-### Define the Response Model
+### 3. Load the request
 
 ```swift
-import Foundation
-
-struct User: Decodable {
-    let id: Int
-    let name: String
-    let email: String
-    let gender: String
-    let status: String
-}
+let service = MyAPIService()
+let response = try await service.load(request)
+print(response.body.name)
+print(response.status) // HTTPResponse.Status
 ```
 
-### Implement the `GoRESTService` Actor
+## Endpoints
+
+For reusable, parameterized requests, define an `Endpoint`:
 
 ```swift
-import Foundation
+struct GetUser: Endpoint {
+    let userID: String
 
-actor GoRESTService: HTTPService {
-    let session: URLSession
-
-    init(session: URLSession = .shared) {
-        self.session = session
-    }
-
-    func fetchUsers() async throws -> [User] {
-        let endpoint = GetUsers()
-        let call = endpoint.call
-        let (data, _) = try await load(call)
-        return try JSONDecoder().decode([User].self, from: data)
+    var request: some Request<User> {
+        Get<User>("users", userID)
+            .header(.accept, "application/json")
     }
 }
+
+// Usage
+let endpoint = GetUser(userID: "42")
+let response = try await service.load(endpoint)
 ```
 
----
+## Headers
 
-### Extend the `GoRESTService` Actor: Adding Authentication
+### Simple Headers
 
-For many APIs, authentication is required to access resources. This logic can be added incrementally to the `GoRESTService` implementation.
-
-#### Define the `TokenProvider` Protocol
-
-The `TokenProvider` protocol inherits from `Actor` to ensure thread safety and implements the `accessToken()` method for securely retrieving tokens.
+Use `HTTPField.Name` from swift-http-types:
 
 ```swift
-import Foundation
-
-protocol TokenProvider: Actor {
-    func accessToken() throws -> String
-}
+Get<User>("users")
+    .header(.authorization, "Bearer token")
+    .header(.accept, "application/json")
+    .header(.contentType, "application/json")
 ```
 
-#### Update the `GoRESTService` Actor with Authentication Logic
+### Type-Safe Headers
 
-Here’s how the same `GoRESTService` actor is updated to include token management via the `TokenProvider`.
+Use the built-in header types with the `headers` result builder:
 
 ```swift
-import Foundation
-
-actor GoRESTService: HTTPService {
-    let session: URLSession
-    private let tokenProvider: TokenProvider
-
-    init(session: URLSession = .shared, tokenProvider: TokenProvider) {
-        self.session = session
-        self.tokenProvider = tokenProvider
+Get<User>("users")
+    .headers {
+        Authorization(.bearer(token: "my-token"))
+        Accept(.json)
+        ContentType(.json)
+        UserAgent("MyApp/1.0")
+        AcceptLanguage(.english)
     }
-
-    func fetchUsers() async throws -> [User] {
-        let endpoint = GetUsers()
-
-        // Retrieve the token and apply it using the .auth(.bearer) modifier
-        let token = try await tokenProvider.accessToken()
-        let callWithAuth = endpoint.call.auth(.bearer(token))
-
-        let (data, _) = try await load(callWithAuth)
-        return try JSONDecoder().decode([User].self, from: data)
-    }
-}
 ```
 
----
+### Available Header Types
 
-#### Example `TokenProvider` Implementation
+- `Authorization` - With extensible schemes: `.bearer(token:)`, `.basic(username:password:)`
+- `Accept` - Accept header with `MIMEType`
+- `ContentType` - Content-Type header with `MIMEType`
+- `UserAgent` - User-Agent header
+- `AcceptLanguage` - Accept-Language header with `Language` and optional quality
+- `ContentLanguage` - Content-Language header
+- `ContentLength` - Content-Length header
+- `CacheControl` - Cache-Control header with directives
 
-The `SecureTokenProvider` securely retrieves the token from a storage mechanism like the Keychain.
+### Custom Authorization Schemes
+
+Implement the `Authorization.Scheme` protocol:
 
 ```swift
-actor SecureTokenProvider: TokenProvider {
-    private var token: String?
+struct APIKey: Authorization.Scheme {
+    let key: String
 
-    func accessToken() throws -> String {
-        if let token = token {
-            return token
+    var value: String {
+        "ApiKey \(key)"
+    }
+}
+
+// Usage
+Get<User>("users")
+    .headers {
+        Authorization(APIKey(key: "secret"))
+    }
+```
+
+## Query Parameters
+
+```swift
+Get<[User]>("users")
+    .queries {
+        Query(name: "page", value: "1")
+        Query(name: "limit", value: "20")
+
+        if let search = searchTerm {
+            Query(name: "q", value: search)
+        }
+    }
+```
+
+## Request Body
+
+```swift
+// Direct value
+Post<User>("users")
+    .body(CreateUserInput(name: "John"))
+
+// With result builder (supports conditionals)
+Post<User>("users")
+    .body {
+        if useDetailed {
+            DetailedInput(name: "John", age: 30)
         } else {
-            throw URLError(.userAuthenticationRequired)
+            SimpleInput(name: "John")
         }
     }
 
-    func setToken(_ newToken: String) {
-        token = newToken
-    }
-}
+// Custom encoder for a specific request
+let encoder = JSONEncoder()
+encoder.keyEncodingStrategy = .convertToSnakeCase
+
+Post<User>("users")
+    .body(input)
+    .encoder(encoder)
 ```
 
----
-
-#### Why Add Authentication?
-
-The initial `GoRESTService` implementation works for open APIs. However, when working with APIs requiring authentication, the `TokenProvider` allows secure token management without significantly altering the service’s core structure. This approach keeps the HTTP service extensible and adaptable to evolving requirements.
-
----
-
-#### Using the `GoRESTService` Actor with Authentication Logic
-
-Here’s how to initialize and use the updated `GoRESTService` with the `SecureTokenProvider`:
+## Custom Encoder & Decoder
 
 ```swift
-let tokenProvider = SecureTokenProvider()
-let service = GoRESTService(tokenProvider: tokenProvider)
+struct MyAPIService: HTTPURLSessionService {
+    let baseURL = URL(string: "https://api.example.com")!
 
-Task {
-    do {
-        let users = try await service.fetchUsers()
-        print("Fetched users: \(users)")
-    } catch {
-        print("Error fetching users: \(error)")
+    var encoder: JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }
+
+    var decoder: JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
     }
 }
 ```
 
----
+## Architecture
 
-## Built-In Modifiers
+NetworkKit is split into two modules:
 
-### HTTP Headers
+- **NetworkKit** - Core module for building `HTTPRequest` objects from swift-http-types. No URLSession dependency.
+- **NetworkKitFoundation** - Driver module that executes requests via URLSession using HTTPTypesFoundation.
 
-- `accept(_:)`: Sets the `Accept` header.
-- `contentType(_:)`: Sets the `Content-Type` header.
-- `authorization(_:)`: Adds an `Authorization` header.
-- `userAgent(_:)`: Sets a custom `User-Agent`.
-
-### Request Properties
-
-- `method(_:)`: Modifies the HTTP method.
-- `path(_:)`: Appends path to the request.
-- `queries(_:)`: Appends query parameters to the URL.
-- `body(_:)`: Adds a request body.
-
----
-
-## Why Melatonin?
-
-Melatonin leverages Swift’s type safety and declarative programming principles to create a robust and flexible networking library. Its composable design and extensibility make it ideal for modern Swift applications.
-
----
-
-## Contributing
-
-Contributions are welcome! Feel free to open issues or submit pull requests to improve Melatonin.
-
----
+This design allows for future drivers (e.g., async-http-client for swift-nio).
 
 ## License
 
-Melatonin is released under the MIT License. See [LICENSE](./LICENSE) for details.
-
----
+NetworkKit is released under the MIT License.

@@ -6,22 +6,25 @@
 //
 
 import Foundation
-import Melatonin
+import NetworkKit
 
 struct GetPosts: Endpoint {
     var user: User.ID? = nil
     var page: Int = 1
     var recordsPerPage: Int = 10
     var title: String? = nil
-    
-    var call: some HTTPCall {
-        GoRESTCall()
-            .path("/public/v2/posts")
+
+    var request: some Request<[Post]> {
+        Get<[Post]>("posts")
             .queries {
-                Query(name: "user_id", value: user.map(String.init))
+                if let user {
+                    Query(name: "user_id", value: String(user))
+                }
                 Query(name: "page", value: String(page))
                 Query(name: "per_page", value: String(recordsPerPage))
-                Query(name: "title", value: title)
+                if let title {
+                    Query(name: "title", value: title)
+                }
             }
     }
 }
