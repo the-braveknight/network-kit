@@ -9,7 +9,7 @@ import SwiftUI
 import NetworkKit
 import NetworkKitFoundation
 
-struct HTTPGoRESTService: HTTPService, GoRESTService {
+struct HTTPGoRESTService: HTTPURLSessionService, GoRESTService {
     let baseURL = URL(string: "https://gorest.co.in/public/v2")!
 
     let session: URLSession
@@ -43,20 +43,20 @@ struct HTTPGoRESTService: HTTPService, GoRESTService {
         let endpoint = GetPosts(page: page)
         let response = try await load(endpoint)
         let pagination = try PaginationMetadata(from: response.headerFields)
-        return PaginatedResponse(items: response.body, pagination: pagination)
+        return try PaginatedResponse(items: response.body, pagination: pagination)
     }
 
     func loadTodos(page: Int) async throws -> PaginatedResponse<Todo> {
         let endpoint = GetTodos(page: page)
         let response = try await load(endpoint)
         let pagination = try PaginationMetadata(from: response.headerFields)
-        return PaginatedResponse(items: response.body, pagination: pagination)
+        return try PaginatedResponse(items: response.body, pagination: pagination)
     }
 
     func loadUsers(page: Int) async throws -> PaginatedResponse<User> {
         let endpoint = GetUsers(page: page)
         let response = try await load(endpoint)
         let pagination = try PaginationMetadata(from: response.headerFields)
-        return PaginatedResponse(items: response.body, pagination: pagination)
+        return try PaginatedResponse(items: response.body, pagination: pagination)
     }
 }
