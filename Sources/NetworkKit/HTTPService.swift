@@ -5,6 +5,8 @@
 //  Created by Zaid Rahhawi on 12/10/25.
 //
 
+import Foundation
+
 /// The base protocol for network service implementations that execute HTTP requests.
 ///
 /// `HTTPService` defines the core interface for executing HTTP requests in your application.
@@ -44,11 +46,11 @@
 /// ```
 public protocol HTTPService: Sendable {
     /// The encoder used to encode request bodies.
-    associatedtype Encoder: RequestEncoder
+    associatedtype Encoder: RequestEncoder = JSONEncoder
     var encoder: Encoder { get }
 
     /// The decoder used to decode response bodies.
-    associatedtype Decoder: ResponseDecoder
+    associatedtype Decoder: ResponseDecoder = JSONDecoder
     var decoder: Decoder { get }
 
     /// Loads a request and returns the decoded response.
