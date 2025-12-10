@@ -69,6 +69,16 @@ struct RequestTests {
         #expect(request.pathComponents == ["api", "v2", "users", "profile"])
     }
 
+    @Test func slashSeparatedPath() {
+        let request = Get<Data>("/users/42/profile")
+        #expect(request.pathComponents == ["/users/42/profile"])
+    }
+
+    @Test func mixedPathStyles() {
+        let request = Get<Data>("api", "/v2/users", "42")
+        #expect(request.pathComponents == ["api", "/v2/users", "42"])
+    }
+
     // MARK: - Request ID
 
     @Test func uniqueRequestID() {

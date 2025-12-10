@@ -12,46 +12,30 @@ import Foundation
 
 @Suite("HTTPURLSessionService Tests")
 struct HTTPURLSessionServiceTests {
-    
+
     // MARK: - Service Configuration
-    
+
     @Test func serviceUsesCustomEncoder() throws {
-        struct TestService: HTTPURLSessionService {
-            let baseURL = URL(string: "https://api.example.com")!
-
-            var encoder: JSONEncoder {
-                let encoder = JSONEncoder()
-                encoder.keyEncodingStrategy = .convertToSnakeCase
-                return encoder
-            }
-        }
-
         struct CamelCaseModel: Encodable {
             let firstName: String
         }
 
-        let service = TestService()
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        let service = TestService(encoder: encoder)
         let data = try service.encoder.encode(CamelCaseModel(firstName: "John"))
         let json = try #require(String(data: data, encoding: .utf8))
         #expect(json.contains("first_name"))
     }
-    
+
     @Test func serviceUsesCustomDecoder() throws {
-        struct TestService: HTTPURLSessionService {
-            let baseURL = URL(string: "https://api.example.com")!
-
-            var decoder: JSONDecoder {
-                let decoder = JSONDecoder()
-                decoder.keyDecodingStrategy = .convertFromSnakeCase
-                return decoder
-            }
-        }
-
         struct SnakeCaseModel: Decodable {
             let firstName: String
         }
 
-        let service = TestService()
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let service = TestService(decoder: decoder)
         let json = #"{"first_name": "John"}"#.data(using: .utf8)!
         let model = try service.decoder.decode(SnakeCaseModel.self, from: json)
         #expect(model.firstName == "John")
@@ -66,7 +50,7 @@ struct RequestBodyEncodingTests {
         struct Input: Encodable, Sendable {
             let firstName: String
         }
-        
+
         let request = Post<Data>("users").body(Input(firstName: "John"))
 
         // Encode with snake_case encoder
@@ -127,5 +111,16 @@ struct RequestBodyEncodingTests {
         let json = try #require(String(data: encoded, encoding: .utf8))
 
         #expect(json.contains("test"))
+    }
+}
+
+struct TestService: HTTPURLSessionService {
+    let baseURL = URL(string: "https://api.example.com")!
+    let encoder: JSONEncoder
+    let decoder: JSONDecoder
+
+    init(encoder: JSONEncoder = JSONEncoder(), decoder: JSONDecoder = JSONDecoder()) {
+        self.encoder = encoder
+        self.decoder = decoder
     }
 }

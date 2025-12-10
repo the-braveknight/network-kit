@@ -218,7 +218,7 @@ NetworkKit is split into two modules:
 - **NetworkKit** - Core module for building `HTTPRequest` objects from swift-http-types. No URLSession dependency.
 - **NetworkKitFoundation** - Driver module that executes requests via URLSession using HTTPTypesFoundation.
 
-This design allows for future drivers (e.g., async-http-client for swift-nio).
+This design allows for alternative drivers (e.g., [network-kit-async-http-client](https://github.com/the-braveknight/network-kit-async-http-client) for server-side Swift).
 
 ## License
 

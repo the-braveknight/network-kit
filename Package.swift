@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "NetworkKit",
+    name: "network-kit",
     platforms: [
         .macOS(.v13),
         .iOS(.v16),
