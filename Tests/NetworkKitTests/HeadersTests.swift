@@ -12,45 +12,38 @@ import HTTPTypes
 
 @Suite("Headers Tests")
 struct HeadersTests {
-    let baseURL = "https://api.example.com"
 
     // MARK: - Single Header
 
-    @Test func singleHeader() throws {
+    @Test func singleHeader() {
         let request = Get<Data>("users")
             .header(.accept, "application/json")
 
-        let httpRequest = try request.httpRequest(baseURL: baseURL)
-
-        #expect(httpRequest.headerFields[.accept] == "application/json")
+        #expect(request.components.headerFields[.accept] == "application/json")
     }
 
     // MARK: - Multiple Headers
 
-    @Test func multipleHeaders() throws {
+    @Test func multipleHeaders() {
         let request = Get<Data>("users")
             .header(.authorization, "Bearer token")
             .header(.accept, "application/json")
             .header(.contentType, "application/json")
             .header(.userAgent, "MyApp/1.0")
 
-        let httpRequest = try request.httpRequest(baseURL: baseURL)
-
-        #expect(httpRequest.headerFields[.authorization] == "Bearer token")
-        #expect(httpRequest.headerFields[.accept] == "application/json")
-        #expect(httpRequest.headerFields[.contentType] == "application/json")
-        #expect(httpRequest.headerFields[.userAgent] == "MyApp/1.0")
+        #expect(request.components.headerFields[.authorization] == "Bearer token")
+        #expect(request.components.headerFields[.accept] == "application/json")
+        #expect(request.components.headerFields[.contentType] == "application/json")
+        #expect(request.components.headerFields[.userAgent] == "MyApp/1.0")
     }
 
     // MARK: - Authorization
 
-    @Test func bearerAuthorization() throws {
+    @Test func bearerAuthorization() {
         let request = Get<Data>("users")
             .header(.authorization, "Bearer my-token")
 
-        let httpRequest = try request.httpRequest(baseURL: baseURL)
-
-        #expect(httpRequest.headerFields[.authorization] == "Bearer my-token")
+        #expect(request.components.headerFields[.authorization] == "Bearer my-token")
     }
 
     @Test func basicAuthorization() throws {
@@ -58,9 +51,7 @@ struct HeadersTests {
         let request = Get<Data>("users")
             .header(.authorization, "Basic \(credentials)")
 
-        let httpRequest = try request.httpRequest(baseURL: baseURL)
-        let authHeader = try #require(httpRequest.headerFields[.authorization])
-
+        let authHeader = try #require(request.components.headerFields[.authorization])
         #expect(authHeader.hasPrefix("Basic "))
 
         // Verify base64 encoding
@@ -73,69 +64,104 @@ struct HeadersTests {
 
     // MARK: - Content Type
 
-    @Test func contentTypeHeader() throws {
+    @Test func contentTypeHeader() {
         let request = Post<Data>("users")
             .header(.contentType, "application/json")
 
-        let httpRequest = try request.httpRequest(baseURL: baseURL)
-
-        #expect(httpRequest.headerFields[.contentType] == "application/json")
+        #expect(request.components.headerFields[.contentType] == "application/json")
     }
 
-    @Test func contentTypeVariants() throws {
+    @Test func contentTypeVariants() {
         let jsonRequest = Post<Data>("a").header(.contentType, "application/json")
         let xmlRequest = Post<Data>("b").header(.contentType, "application/xml")
         let textRequest = Post<Data>("c").header(.contentType, "text/plain")
         let htmlRequest = Post<Data>("d").header(.contentType, "text/html")
 
-        #expect(try jsonRequest.httpRequest(baseURL: baseURL).headerFields[.contentType] == "application/json")
-        #expect(try xmlRequest.httpRequest(baseURL: baseURL).headerFields[.contentType] == "application/xml")
-        #expect(try textRequest.httpRequest(baseURL: baseURL).headerFields[.contentType] == "text/plain")
-        #expect(try htmlRequest.httpRequest(baseURL: baseURL).headerFields[.contentType] == "text/html")
+        #expect(jsonRequest.components.headerFields[.contentType] == "application/json")
+        #expect(xmlRequest.components.headerFields[.contentType] == "application/xml")
+        #expect(textRequest.components.headerFields[.contentType] == "text/plain")
+        #expect(htmlRequest.components.headerFields[.contentType] == "text/html")
     }
 
     // MARK: - Accept
 
-    @Test func acceptHeader() throws {
+    @Test func acceptHeader() {
         let request = Get<Data>("users")
             .header(.accept, "application/json")
 
-        let httpRequest = try request.httpRequest(baseURL: baseURL)
-
-        #expect(httpRequest.headerFields[.accept] == "application/json")
+        #expect(request.components.headerFields[.accept] == "application/json")
     }
 
     // MARK: - User Agent
 
-    @Test func userAgentHeader() throws {
+    @Test func userAgentHeader() {
         let request = Get<Data>("users")
             .header(.userAgent, "MyApp/1.0")
 
-        let httpRequest = try request.httpRequest(baseURL: baseURL)
-
-        #expect(httpRequest.headerFields[.userAgent] == "MyApp/1.0")
+        #expect(request.components.headerFields[.userAgent] == "MyApp/1.0")
     }
 
     // MARK: - Header Overwrite
 
-    @Test func headerOverwrite() throws {
+    @Test func headerOverwrite() {
         let request = Get<Data>("users")
             .header(.accept, "text/plain")
             .header(.accept, "application/json")
 
-        let httpRequest = try request.httpRequest(baseURL: baseURL)
-
-        #expect(httpRequest.headerFields[.accept] == "application/json")
+        #expect(request.components.headerFields[.accept] == "application/json")
     }
 
     // MARK: - Custom Headers
 
-    @Test func customHeader() throws {
+    @Test func customHeader() {
         let request = Get<Data>("users")
             .header(.init("X-Custom-Header")!, "custom-value")
 
-        let httpRequest = try request.httpRequest(baseURL: baseURL)
+        #expect(request.components.headerFields[.init("X-Custom-Header")!] == "custom-value")
+    }
 
-        #expect(httpRequest.headerFields[.init("X-Custom-Header")!] == "custom-value")
+    // MARK: - Headers Builder
+
+    @Test func headersBuilder() {
+        let request = Get<Data>("users")
+            .headers {
+                Authorization(.bearer(token: "my-token"))
+                Accept(.json)
+                ContentType(.json)
+                UserAgent("MyApp/1.0")
+            }
+
+        #expect(request.components.headerFields[.authorization] == "Bearer my-token")
+        #expect(request.components.headerFields[.accept] == "application/json")
+        #expect(request.components.headerFields[.contentType] == "application/json")
+        #expect(request.components.headerFields[.userAgent] == "MyApp/1.0")
+    }
+
+    @Test func headersBuilderWithConditional() {
+        let includeAuth = true
+        let request = Get<Data>("users")
+            .headers {
+                Accept(.json)
+                if includeAuth {
+                    Authorization(.bearer(token: "my-token"))
+                }
+            }
+
+        #expect(request.components.headerFields[.accept] == "application/json")
+        #expect(request.components.headerFields[.authorization] == "Bearer my-token")
+    }
+
+    @Test func headersBuilderWithConditionalFalse() {
+        let includeAuth = false
+        let request = Get<Data>("users")
+            .headers {
+                Accept(.json)
+                if includeAuth {
+                    Authorization(.bearer(token: "my-token"))
+                }
+            }
+
+        #expect(request.components.headerFields[.accept] == "application/json")
+        #expect(request.components.headerFields[.authorization] == nil)
     }
 }

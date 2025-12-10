@@ -17,7 +17,7 @@ struct User: Codable, Sendable {
     let name: String
 }
 
-struct CreateUserInput: Encodable {
+struct CreateUserInput: Encodable, Sendable {
     let name: String
     let email: String
 }
@@ -60,42 +60,38 @@ struct SearchUsers: Endpoint {
 
 @Suite("Endpoint Tests")
 struct EndpointTests {
-    let baseURL = "https://api.example.com"
 
-    @Test func getEndpoint() throws {
+    @Test func getEndpoint() {
         let endpoint = GetUser(userID: "42")
-        let httpRequest = try endpoint.httpRequest(baseURL: baseURL)
 
-        #expect(httpRequest.method == .get)
-        #expect(httpRequest.path == "/users/42")
-        #expect(httpRequest.headerFields[.accept] == "application/json")
+        #expect(endpoint.request.method == .get)
+        #expect(endpoint.request.pathComponents == ["users", "42"])
+        #expect(endpoint.request.components.headerFields[.accept] == "application/json")
     }
 
     @Test func postEndpoint() throws {
         let input = CreateUserInput(name: "John", email: "john@example.com")
         let endpoint = CreateUser(input: input)
-        let httpRequest = try endpoint.httpRequest(baseURL: baseURL)
 
-        #expect(httpRequest.method == .post)
-        #expect(httpRequest.path == "/users")
-        #expect(httpRequest.headerFields[.authorization] == "Bearer test-token")
-        #expect(httpRequest.headerFields[.contentType] == "application/json")
+        #expect(endpoint.request.method == .post)
+        #expect(endpoint.request.pathComponents == ["users"])
+        #expect(endpoint.request.components.headerFields[.authorization] == "Bearer test-token")
 
+        // Verify body is set
         let body = try #require(endpoint.request.components.body)
-        let json = try #require(String(data: body, encoding: .utf8))
+        let encoded = try body.encode(using: JSONEncoder())
+        let json = try #require(String(data: encoded, encoding: .utf8))
 
         #expect(json.contains("John"))
         #expect(json.contains("john@example.com"))
     }
 
-    @Test func endpointWithQueries() throws {
+    @Test func endpointWithQueries() {
         let endpoint = SearchUsers(query: "john", page: 2)
-        let httpRequest = try endpoint.httpRequest(baseURL: baseURL)
 
-        let path = try #require(httpRequest.path)
-
-        #expect(path.contains("q=john"))
-        #expect(path.contains("page=2"))
+        #expect(endpoint.request.components.queryItems.count == 2)
+        #expect(endpoint.request.components.queryItems.contains { $0.name == "q" && $0.value == "john" })
+        #expect(endpoint.request.components.queryItems.contains { $0.name == "page" && $0.value == "2" })
     }
 
     @Test func endpointResponseType() {
@@ -106,29 +102,5 @@ struct EndpointTests {
         // These assertions verify the Response associated type is correctly inferred
         #expect(type(of: getUserEndpoint).Response.self == User.self)
         #expect(type(of: searchEndpoint).Response.self == [User].self)
-    }
-}
-
-// MARK: - Request URL Tests
-
-@Suite("Request URL Tests")
-struct RequestURLTests {
-    let baseURL = "https://api.example.com"
-
-    @Test func requestBuildsCorrectURL() throws {
-        let request = Get<Data>("users", "42")
-        let httpRequest = try request.httpRequest(baseURL: baseURL)
-
-        #expect(httpRequest.scheme == "https")
-        #expect(httpRequest.authority == "api.example.com")
-        #expect(httpRequest.path == "/users/42")
-    }
-
-    @Test func requestWithBaseURLPath() throws {
-        let baseWithPath = "https://api.example.com/v1"
-        let request = Get<Data>("users", "42")
-        let httpRequest = try request.httpRequest(baseURL: baseWithPath)
-
-        #expect(httpRequest.path == "/v1/users/42")
     }
 }

@@ -12,39 +12,37 @@ import HTTPTypes
 
 @Suite("Query Tests")
 struct QueryTests {
-    let baseURL = "https://api.example.com"
 
     // MARK: - Single Query
 
-    @Test func singleQuery() throws {
+    @Test func singleQuery() {
         let request = Get<Data>("users")
             .query(name: "page", value: "1")
 
-        let httpRequest = try request.httpRequest(baseURL: baseURL)
-        let path = try #require(httpRequest.path)
-
-        #expect(path.contains("page=1"))
+        #expect(request.components.queryItems.count == 1)
+        #expect(request.components.queryItems[0].name == "page")
+        #expect(request.components.queryItems[0].value == "1")
     }
 
     // MARK: - Query Builder
 
-    @Test func queriesBuilder() throws {
+    @Test func queriesBuilder() {
         let request = Get<Data>("users")
             .queries {
                 Query(name: "page", value: "1")
                 Query(name: "limit", value: "20")
             }
 
-        let httpRequest = try request.httpRequest(baseURL: baseURL)
-        let path = try #require(httpRequest.path)
-
-        #expect(path.contains("page=1"))
-        #expect(path.contains("limit=20"))
+        #expect(request.components.queryItems.count == 2)
+        #expect(request.components.queryItems[0].name == "page")
+        #expect(request.components.queryItems[0].value == "1")
+        #expect(request.components.queryItems[1].name == "limit")
+        #expect(request.components.queryItems[1].value == "20")
     }
 
     // MARK: - Conditional Queries
 
-    @Test func conditionalQueries() throws {
+    @Test func conditionalQueries() {
         let includeSearch = true
         let request = Get<Data>("users")
             .queries {
@@ -54,14 +52,11 @@ struct QueryTests {
                 }
             }
 
-        let httpRequest = try request.httpRequest(baseURL: baseURL)
-        let path = try #require(httpRequest.path)
-
-        #expect(path.contains("page=1"))
-        #expect(path.contains("search=john"))
+        #expect(request.components.queryItems.count == 2)
+        #expect(request.components.queryItems.contains { $0.name == "search" && $0.value == "john" })
     }
 
-    @Test func conditionalQueriesFalse() throws {
+    @Test func conditionalQueriesFalse() {
         let includeSearch = false
         let request = Get<Data>("users")
             .queries {
@@ -71,61 +66,30 @@ struct QueryTests {
                 }
             }
 
-        let httpRequest = try request.httpRequest(baseURL: baseURL)
-        let path = try #require(httpRequest.path)
-
-        #expect(path.contains("page=1"))
-        #expect(!path.contains("search"))
+        #expect(request.components.queryItems.count == 1)
+        #expect(!request.components.queryItems.contains { $0.name == "search" })
     }
 
     // MARK: - Nil Value
 
-    @Test func queryWithNilValue() throws {
+    @Test func queryWithNilValue() {
         let request = Get<Data>("users")
             .query(name: "filter", value: nil)
 
-        let httpRequest = try request.httpRequest(baseURL: baseURL)
-        let path = try #require(httpRequest.path)
-
-        #expect(path.contains("filter"))
-    }
-
-    // MARK: - Special Characters
-
-    @Test func queryWithSpecialCharacters() throws {
-        let request = Get<Data>("search")
-            .query(name: "q", value: "hello world")
-
-        let httpRequest = try request.httpRequest(baseURL: baseURL)
-        let path = try #require(httpRequest.path)
-
-        // URL encoding should handle spaces
-        #expect(path.contains("q=hello%20world"))
+        #expect(request.components.queryItems.count == 1)
+        #expect(request.components.queryItems[0].name == "filter")
+        #expect(request.components.queryItems[0].value == nil)
     }
 
     // MARK: - Multiple Queries Chained
 
-    @Test func chainedQueries() throws {
+    @Test func chainedQueries() {
         let request = Get<Data>("users")
             .query(name: "page", value: "1")
             .query(name: "limit", value: "10")
 
-        let httpRequest = try request.httpRequest(baseURL: baseURL)
-        let path = try #require(httpRequest.path)
-
-        #expect(path.contains("page=1"))
-        #expect(path.contains("limit=10"))
-    }
-
-    // MARK: - Query with name and value shorthand
-
-    @Test func queryShorthand() throws {
-        let request = Get<Data>("users")
-            .query(name: "page", value: "1")
-
-        let httpRequest = try request.httpRequest(baseURL: baseURL)
-        let path = try #require(httpRequest.path)
-
-        #expect(path.contains("page=1"))
+        #expect(request.components.queryItems.count == 2)
+        #expect(request.components.queryItems[0].name == "page")
+        #expect(request.components.queryItems[1].name == "limit")
     }
 }

@@ -19,7 +19,6 @@ extension Request {
     /// Sets the request body with an `Encodable` value.
     ///
     /// The value will be encoded using the service's encoder when the request is loaded.
-    /// Automatically sets the `Content-Type` header to `application/json`.
     ///
     /// - Parameter body: The encodable value to use as the request body
     public func body(_ body: some Encodable & Sendable) -> Self {
@@ -27,14 +26,12 @@ extension Request {
         copy.components.body = .encodable { encoder in
             try encoder.encode(body)
         }
-        copy.components.headerFields[.contentType] = "application/json"
         return copy
     }
 
     /// Sets the request body using a result builder.
     ///
     /// The value will be encoded using the service's encoder when the request is loaded.
-    /// Automatically sets the `Content-Type` header to `application/json`.
     ///
     /// ```swift
     /// Post<User>("users")
@@ -54,7 +51,6 @@ extension Request {
             copy.components.body = .encodable { encoder in
                 try encoder.encode(body)
             }
-            copy.components.headerFields[.contentType] = "application/json"
         }
         return copy
     }
