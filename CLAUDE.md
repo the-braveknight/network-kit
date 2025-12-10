@@ -27,9 +27,13 @@ swift test
 - **`Endpoint`** - Wrapper protocol for reusable, parameterized request definitions. Contains a `request` property.
 - **`HTTPHeader`** - Protocol for type-safe header definitions with `name` and `value`.
 
+### Base Protocol (NetworkKit)
+
+- **`HTTPService`** - Base protocol for network services. Provides `encoder`, `decoder`, and `load()` methods.
+
 ### Driver Protocol (NetworkKitFoundation)
 
-- **`HTTPService`** - Protocol for network services. Provides `baseURL` (as `URL`), `session`, `decoder`, and `load()` methods.
+- **`HTTPURLSessionService`** - URLSession-based implementation of `HTTPService`. Adds `baseURL` (as `URL`) and `session` properties.
 
 ### Key Types
 
@@ -99,8 +103,12 @@ Sources/
 │   │   ├── Request+Headers.swift  # header(), headers(), HTTPHeadersBuilder
 │   │   ├── Request+Query.swift    # query(), queries(), QueryBuilder
 │   │   ├── Request+Body.swift     # body(), HTTPBodyBuilder
+│   │   ├── Request+Encoder.swift  # encoder() modifier
+│   │   ├── Request+Decoder.swift  # decoder() modifier
 │   │   ├── RequestComponents.swift
+│   │   ├── RequestBody.swift      # RequestBody enum (.data, .encodable)
 │   │   ├── RequestEncoder.swift
+│   │   ├── Query.swift
 │   │   └── Methods/
 │   │       ├── Get.swift
 │   │       ├── Post.swift
@@ -109,11 +117,12 @@ Sources/
 │   │       ├── Delete.swift
 │   │       ├── Head.swift
 │   │       └── Options.swift
-│   └── Response/
-│       ├── Response.swift
-│       └── ResponseDecoder.swift
+│   ├── Response/
+│   │   ├── Response.swift
+│   │   └── ResponseDecoder.swift
+│   └── HTTPService.swift              # Base HTTPService protocol
 └── NetworkKitFoundation/
-    └── HTTPService.swift
+    └── HTTPURLSessionService.swift    # URLSession-based driver
 
 Tests/
 ├── NetworkKitTests/

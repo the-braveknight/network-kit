@@ -178,12 +178,13 @@ Post<User>("users")
         }
     }
 
-// Custom encoder
+// Custom encoder for a specific request
 let encoder = JSONEncoder()
 encoder.keyEncodingStrategy = .convertToSnakeCase
 
 Post<User>("users")
-    .body(input, encoder: encoder)
+    .body(input)
+    .encoder(encoder)
 ```
 
 ## Custom Decoder
