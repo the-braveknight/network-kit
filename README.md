@@ -42,7 +42,7 @@ Add the targets you need:
 import NetworkKit
 import NetworkKitFoundation
 
-struct MyAPIService: HTTPService {
+struct MyAPIService: HTTPURLSessionService {
     let baseURL = URL(string: "https://api.example.com")!
 }
 ```
@@ -55,8 +55,10 @@ let request = Get<User>("users", "42")
 
 // POST request with headers and body
 let request = Post<User>("users")
-    .header(.authorization, "Bearer token123")
-    .header(.contentType, "application/json")
+    .headers {
+        Authorization(.bearer(token: "token123"))
+        ContentType(.json)
+    }
     .body(CreateUserInput(name: "John", email: "john@example.com"))
 ```
 
@@ -187,11 +189,18 @@ Post<User>("users")
     .encoder(encoder)
 ```
 
-## Custom Decoder
+## Custom Encoder & Decoder
 
 ```swift
-struct MyAPIService: HTTPService {
+struct MyAPIService: HTTPURLSessionService {
     let baseURL = URL(string: "https://api.example.com")!
+
+    var encoder: JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }
 
     var decoder: JSONDecoder {
         let decoder = JSONDecoder()

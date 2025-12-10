@@ -135,7 +135,7 @@ Tests/
 - Use `HTTPHeader` types with `headers { }` builder for type-safe declarative headers
 - Use result builders for declarative configuration
 - Keep `Sendable` conformance on all public types
-- Use `URL` for `baseURL` in `HTTPService`
+- Use `URL` for `baseURL` in `HTTPURLSessionService`
 
 ## Testing
 
